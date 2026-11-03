@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#070b16" />
+    <title>Modo mock · VIO</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="ar-header">
+        <div>
+          <p class="eyebrow">Fase 0 · banco de pruebas de escritorio</p>
+          <h1>Modo mock</h1>
+          <p class="lead">
+            Webcam real y pose simulada en la convención de WebXR. Sirve para probar la UI y la
+            matemática sin el celular. La pose todavía no se envía al servidor: el relay llega en la
+            Fase 2.
+          </p>
+        </div>
+        <a class="button small" href="/">Volver</a>
+      </header>
+
+      <section class="mock-layout">
+        <article class="card">
+          <h2>Entrada de cámara</h2>
+          <div class="video-wrap">
+            <video id="camera" playsinline muted autoplay></video>
+            <div class="video-empty" id="video-empty">
+              <strong>Webcam apagada</strong>
+              <span>Activá la cámara para ver la entrada real.</span>
+            </div>
+          </div>
+          <div class="status-line">
+            <span class="pill" id="camera-status" data-status="pending">Cámara: apagada</span>
+            <span class="pill" id="mock-fps">Simulación: —</span>
+          </div>
+          <div class="controls">
+            <button id="camera-start" class="button primary" type="button">Activar cámara</button>
+            <button id="camera-stop" class="button" type="button" disabled>Apagar cámara</button>
+            <button id="reset" class="button" type="button">Reiniciar pose</button>
+            <button id="copy" class="button" type="button">Copiar reporte</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Pose simulada (odom / WebXR)</h2>
+          <dl class="kv">
+            <dt>posición</dt>
+            <dd id="pose-p">[0.000, 0.000, 0.000]</dd>
+            <dt>cuatión</dt>
+            <dd id="pose-q">[0.000, 0.000, 0.000, 1.000]</dd>
+            <dt>yaw</dt>
+            <dd id="pose-yaw">0.000 rad</dd>
+          </dl>
+          <canvas
+            id="map"
+            width="640"
+            height="360"
+            aria-label="Vista cenital de la pose simulada"
+          ></canvas>
+          <div class="help">
+            <div><kbd>W</kbd> <kbd>S</kbd> avanzar / retroceder (eje -z)</div>
+            <div><kbd>A</kbd> <kbd>D</kbd> desplazarse a izquierda / derecha</div>
+            <div><kbd>Q</kbd> <kbd>E</kbd> girar yaw</div>
+            <div>La simulación corre a 30 Hz; el dibujo cenital es solo ilustrativo.</div>
+          </div>
+        </article>
+      </section>
+
+      <footer>
+        <div class="hr"></div>
+        <p>
+          La pose se construye con <code>poseFromQuatTranslation</code> y se puede convertir con
+          <code>poseToWebXRMatrix</code>. El mock no valida ARCore ni <code>camera-access</code>:
+          eso requiere el celular real.
+        </p>
+      </footer>
+    </main>
+    <script type="module" src="/src/mock.ts"></script>
+  </body>
+</html>

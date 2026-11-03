@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#070b16" />
+    <title>VIO con marcadores fiduciarios</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <p class="eyebrow">Visión Artificial · TP Integrador</p>
+        <h1>VIO con marcadores fiduciarios y Foxglove</h1>
+        <p class="lead">
+          Localización visual inercial desde el navegador del celular. WebXR
+          <code>immersive-ar</code> aporta la pose de ARCore; AprilTag 36h11 corrige la deriva y
+          Foxglove Studio visualiza la trayectoria en vivo.
+        </p>
+        <div class="badges">
+          <span class="badge"><strong>Fase 0 + 1</strong> código completo</span>
+          <span class="badge">Validación móvil pendiente</span>
+          <span class="badge">Android · Chrome</span>
+          <span class="badge">WebXR + camera-access</span>
+          <span class="badge">AprilTag 36h11 · 16 cm</span>
+        </div>
+        <div class="actions">
+          <a class="button primary" href="/ar-test.html">Probar AR en el celular</a>
+          <a class="button" href="/mock.html">Modo mock (escritorio)</a>
+        </div>
+      </header>
+
+      <section class="grid">
+        <article class="card wide">
+          <h2>Estado del entorno</h2>
+          <ul class="checks" id="checks">
+            <li class="check" data-status="pending">
+              <span class="dot"></span>
+              <div>
+                <strong>Verificando…</strong><span>Leyendo capacidades del navegador.</span>
+              </div>
+            </li>
+          </ul>
+          <div class="status-line">
+            <span class="pill" id="health" data-status="pending">Servidor: verificando…</span>
+            <span class="pill" id="origin">Origen: —</span>
+          </div>
+          <p class="muted" id="ua"></p>
+        </article>
+
+        <article class="card">
+          <h2>Inicio rápido</h2>
+          <pre><code>pnpm install
+pnpm cert:setup   # consola elevada
+pnpm dev</code></pre>
+          <p class="muted">
+            En el celular, instalá <code>certs/rootCA.pem</code> como CA de usuario y abrí la URL
+            HTTPS de esta PC en el puerto 5173. Para la versión compilada:
+            <code>pnpm build &amp;&amp; pnpm start</code> (puerto 8443).
+          </p>
+          <p class="muted">Este equipo: <a id="local-url" href="/">—</a></p>
+        </article>
+
+        <article class="card">
+          <h2>Qué cubre la Fase 0 + 1</h2>
+          <ul class="plain">
+            <li>Monorepo pnpm, TypeScript estricto, ESLint y Vitest.</li>
+            <li>Matemática SE(3), conversiones WebXR/OpenCV/ROS y tests sintéticos.</li>
+            <li>Mapa demo de 4 × 3 × 2,5 m con 6 marcadores.</li>
+            <li>
+              Página de diagnóstico de <code>immersive-ar</code> y <code>camera-access</code>.
+            </li>
+            <li>Mock de escritorio con webcam y pose simulada.</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <h2>Verificación manual pendiente</h2>
+          <ul class="plain">
+            <li>Certificado aceptado por Chrome Android sin advertencias.</li>
+            <li>La sesión AR inicia y entrega pose de tracking.</li>
+            <li><code>camera-access</code> entrega textura de cámara en el celular real.</li>
+            <li>El emulador de Android Studio no implementa WebXR: no sirve para esto.</li>
+          </ul>
+        </article>
+      </section>
+
+      <footer>
+        <div class="hr"></div>
+        <p>
+          Documentación del repo: <code>docs/setup.md</code> · <code>docs/conventions.md</code> ·
+          <code>docs/marker-map.md</code> · <code>docs/results.md</code>. La UI está en español y el
+          código en inglés, según las decisiones del proyecto.
+        </p>
+      </footer>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

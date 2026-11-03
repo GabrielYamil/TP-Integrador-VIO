@@ -1,0 +1,8 @@
+node_modules/
+dist/
+coverage/
+pnpm-lock.yaml
+certs/
+markers/
+data/
+Plan de trabajo VIO con celular, marcadores fiduciarios y Foxglove.md

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#000000" />
+    <title>Prueba AR · VIO</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body class="ar-body">
+    <canvas id="xr-canvas"></canvas>
+    <div id="reticle" class="reticle" hidden></div>
+
+    <div id="overlay" class="overlay" hidden>
+      <div class="overlay-panel">
+        <h2>Diagnóstico AR</h2>
+        <div class="row">
+          <span>Tracking: <strong id="overlay-tracking">—</strong></span>
+          <span>FPS: <strong id="overlay-fps">—</strong></span>
+        </div>
+        <div class="row">
+          <span>Cámara: <strong id="overlay-camera">—</strong></span>
+        </div>
+        <div class="row">
+          <span id="overlay-features">Features: —</span>
+        </div>
+      </div>
+      <div class="overlay-panel">
+        <div class="row">
+          <button id="overlay-stop" class="button small danger" type="button">
+            Terminar sesión
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <main class="page ar-ui">
+      <header class="ar-header">
+        <div>
+          <p class="eyebrow">Fase 0 · diagnóstico WebXR</p>
+          <h1>Prueba de sesión AR</h1>
+        </div>
+        <a class="button small" href="/">Volver</a>
+      </header>
+
+      <section class="grid">
+        <article class="card wide">
+          <h2>Controles</h2>
+          <p class="muted">
+            Abrí esta página en Chrome para Android por HTTPS. Al iniciar se solicita
+            <code>immersive-ar</code> con <code>local-floor</code> y <code>camera-access</code> como
+            features opcionales. El emulador de Android Studio no implementa WebXR, así que esta
+            prueba requiere el celular real.
+          </p>
+          <div class="actions">
+            <button id="start" class="button primary" type="button">Iniciar sesión AR</button>
+            <button id="stop" class="button danger" type="button" disabled>Terminar sesión</button>
+            <button id="copy" class="button" type="button">Copiar reporte</button>
+          </div>
+          <div class="status-line">
+            <span class="pill" id="session-state" data-status="pending">Sesión: inactiva</span>
+            <span class="pill" id="secure-state" data-status="pending">HTTPS: —</span>
+            <span class="pill" id="support-state" data-status="pending">immersive-ar: —</span>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Reporte estructurado</h2>
+          <pre class="report" id="report">Sin datos todavía.</pre>
+        </article>
+
+        <article class="card">
+          <h2>Log</h2>
+          <div class="log" id="log" role="log" aria-live="polite"></div>
+          <p class="muted">
+            Si algo falla, copiá el reporte y revisá la consola remota con
+            <code>chrome://inspect</code>.
+          </p>
+        </article>
+      </section>
+
+      <footer>
+        <div class="hr"></div>
+        <p>
+          La pose se convierte con <code>poseFromWebXRMatrix</code> del paquete
+          <code>@vio/shared</code>. La imagen de cámara solo se inspecciona para confirmar que
+          existe; la extracción de píxeles corresponde a la Fase 4.
+        </p>
+      </footer>
+    </main>
+
+    <script type="module" src="/src/ar-test.ts"></script>
+  </body>
+</html>
