@@ -10,12 +10,12 @@ documentación y la interfaz están en español; el código y los tests en ingl�
 
 ## Estado actual
 
-| Fase                                | Estado                                                               |
-| ----------------------------------- | -------------------------------------------------------------------- |
-| 0 — entorno, HTTPS y prueba AR      | Implementada en código. **Validación en celular pendiente.**         |
-| 1 — matemática SE(3) y convenciones | Completada. 33 tests pasan.                                          |
-| 2 — relay y servidor Foxglove       | Implementada en código. **Validación en Foxglove Studio pendiente.** |
-| 3 a 10                              | Pendientes.                                                          |
+| Fase                                | Estado                                                       |
+| ----------------------------------- | ------------------------------------------------------------ |
+| 0 — entorno, HTTPS y prueba AR      | Implementada en código. **Validación en celular pendiente.** |
+| 1 — matemática SE(3) y convenciones | Completada. 33 tests pasan.                                  |
+| 2 — relay y servidor Foxglove       | Completada. Validada en Foxglove Studio 3.5.0.               |
+| 3 a 10                              | Pendientes.                                                  |
 
 La Fase 0 incluye el servidor HTTPS, el script de certificados, las páginas de
 diagnóstico WebXR y el modo mock de escritorio. Todavía no se validó
@@ -24,8 +24,9 @@ diagnóstico WebXR y el modo mock de escritorio. Todavía no se validó
 La Fase 2 incluye el relay `/ingest`, la validación zod de los mensajes, el
 servidor Foxglove en `:8765`, la publicación de TF, poses, marcadores y métricas,
 y un simulador de cliente. El circuito está cubierto por tests de integración y
-se probó localmente con el simulador. Falta abrir Foxglove Studio de escritorio y
-confirmar los canales en vivo. Ver `docs/results.md` para el detalle.
+se validó visualmente en Foxglove Studio 3.5.0 el 2026-11-05: se vieron los cinco
+tópicos, los seis marcadores y las dos trayectorias. Falta repetir el relay con
+HTTPS real durante la integración móvil. Ver `docs/results.md` para el detalle.
 
 ## Arquitectura
 
@@ -248,15 +249,15 @@ pnpm format:check
 El estado de los tests automáticos y las verificaciones manuales pendientes se
 documenta en [`docs/results.md`](docs/results.md). En el estado actual hay 7
 archivos y 46 tests: 33 de `packages/shared` y 13 de `packages/server`. La
-prueba en celular no se puede reemplazar con tests unitarios ni con el emulador,
-y la conexión a Foxglove Studio sigue pendiente.
+prueba en celular no se puede reemplazar con tests unitarios ni con el emulador.
+La conexión a Foxglove Studio se validó en escritorio; la telemetría real del
+celular sigue pendiente.
 
 ## Roadmap
 
 1. **Fase 0:** cerrar la validación en el celular (certificado, `immersive-ar`,
    tracking y `camera-access`).
-2. **Fase 2:** validar en Foxglove Studio el relay ya implementado: conexión,
-   canales, árbol de TF, trayectorias y métricas.
+2. **Fase 2:** completada. Relay, Foxglove y simulador validados en escritorio.
 3. **Fases 3–4:** pose cruda en vivo e imagen de cámara con intrínsecos.
 4. **Fases 5–6:** detección AprilTag, PnP y corrección de localización.
 5. **Fases 7–10:** layout de Foxglove, métricas, experimentos en sala,
@@ -266,8 +267,8 @@ y la conexión a Foxglove Studio sigue pendiente.
 
 - La validación real de WebXR y `camera-access` está bloqueada hasta conectar
   un celular ARCore.
-- Foxglove Studio todavía no se conectó; el relay se verificó con tests de
-  integración y con el simulador, no con la aplicación de escritorio.
+- Foxglove Studio se validó en escritorio con la versión 3.5.0; falta la
+  telemetría real del celular y una captura de evidencia.
 - El mapa actual es sintético; no se midió una sala real.
 - `@foxglove/ws-protocol` está deprecado, aunque se mantiene la versión elegida
   por el plan.

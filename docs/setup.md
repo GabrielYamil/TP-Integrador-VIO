@@ -417,15 +417,16 @@ automáticos; ver `docs/results.md`.
 
 ### Checklist de Fase 2
 
-- [ ] `pnpm test` pasa los 13 tests del servidor.
-- [ ] `/health` muestra los bloques `ingest` y `foxglove`.
-- [ ] `pnpm sim` envía poses y `messagesValid` aumenta.
-- [ ] Foxglove Studio se conecta a `ws://IP_DE_LA_PC:8765`.
-- [ ] Se ven los cinco tópicos y el árbol `world → odom → camera`.
-- [ ] Se ven los seis marcadores y las dos trayectorias.
-- [ ] `/metrics` muestra tracking, FPS y latencia de procesamiento.
-- [ ] La prueba se registra en `docs/results.md`.
+- [x] `pnpm test` pasa los 13 tests del servidor.
+- [x] `/health` muestra los bloques `ingest` y `foxglove`.
+- [x] `pnpm sim` envía poses y `messagesValid` aumenta.
+- [x] Foxglove Studio se conecta a `ws://IP_DE_LA_PC:8765`.
+- [x] Se ven los cinco tópicos y el árbol `world → odom → camera`.
+- [x] Se ven los seis marcadores y las dos trayectorias.
+- [x] `/metrics` muestra tracking, FPS y latencia de procesamiento.
+- [x] La prueba se registra en `docs/results.md`.
 
-La Fase 2 no se declara cerrada hasta que Foxglove Studio muestre los canales en
-vivo. La validación móvil de la Fase 0 sigue pendiente y se retoma cuando haya un
-celular ARCore disponible.
+La Fase 2 quedó cerrada el **2026-11-05** con Foxglove Studio **3.5.0**. Queda
+pendiente repetir el relay con HTTPS real y los certificados de mkcert durante la
+integración del celular. La validación móvil de la Fase 0 sigue pendiente y se
+retoma cuando haya un celular ARCore disponible.

@@ -8,18 +8,20 @@ a 10 todavía no se implementaron.
 
 ## 1. Resumen
 
-| Fase                          | Estado          | Observación                                                                                                   |
-| ----------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------- |
-| 0 — entorno y HTTPS           | **Parcial**     | El circuito PC está verificado. La aceptación depende de la prueba en celular real, que sigue pendiente.      |
-| 1 — matemática y convenciones | **Completada**  | 33 tests automáticos pasan, incluido el caso sintético de corrección.                                         |
-| 2 — relay y Foxglove          | **En revisión** | Implementada en código. 13 tests del servidor y prueba local con simulador. Falta validar en Foxglove Studio. |
+| Fase                          | Estado         | Observación                                                                                                                             |
+| ----------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 0 — entorno y HTTPS           | **Parcial**    | El circuito PC está verificado. La aceptación depende de la prueba en celular real, que sigue pendiente.                                |
+| 1 — matemática y convenciones | **Completada** | 33 tests automáticos pasan, incluido el caso sintético de corrección.                                                                   |
+| 2 — relay y Foxglove          | **Completada** | 13 tests del servidor. Validada visualmente en Foxglove Studio 3.5.0 el 2026-11-05. Falta repetir el relay con HTTPS real y el celular. |
 
 La Fase 0 no se declara cerrada hasta que Chrome Android acepte el certificado
 e inicie una sesión `immersive-ar` con tracking. En esta máquina no hay un
 celular conectado y `mkcert` no está instalado, así que esa parte no se ejecutó.
 
 La Fase 2 se implementó a pedido explícito, sin esperar el cierre de la Fase 0.
-La validación móvil pendiente no invalida el código del relay, pero sí impide
+Su criterio de aceptación se cumplió: Foxglove Studio mostró el marco `world`,
+los seis marcadores del mapa y la cámara moviéndose con la trayectoria
+sintética. La validación móvil pendiente no invalida el relay, pero sí impide
 considerar cerrada la Fase 0.
 
 ## 2. Verificaciones automáticas
@@ -132,18 +134,30 @@ integración.
 - `sim-client.test.ts`: valida los argumentos y la geometría de las trayectorias
   sintéticas.
 
-### 4.3. Lo que falta verificar manualmente
+### 4.3. Validación visual en Foxglove Studio
 
-- [ ] Conectar Foxglove Studio de escritorio a `ws://IP_DE_LA_PC:8765`.
-- [ ] Ver los cinco tópicos en el panel de datos.
-- [ ] Ver el árbol `world → odom → camera` y los seis marcadores.
-- [ ] Ver la trayectoria cruda en rojo y la corregida en verde.
-- [ ] Ver los valores de `/metrics` y graficar FPS y latencia.
-- [ ] Repetir el circuito con el servidor HTTPS real y `pnpm sim` sin `--http`.
-- [ ] Confirmar que el layout de la Fase 7 se puede construir con estos canales.
+El **2026-11-05** se conectó Foxglove Studio **3.5.0** por **Foxglove
+WebSocket** a `ws://localhost:8765`, con el servidor en modo `--http` en el
+puerto 8443 y el simulador en círculo con deriva a 20 Hz.
 
-La Fase 2 no se declara cerrada hasta completar estas verificaciones en Foxglove
-Studio.
+| Comprobación                                        | Resultado                                                                   |
+| --------------------------------------------------- | --------------------------------------------------------------------------- |
+| Conexión Foxglove WebSocket                         | OK.                                                                         |
+| Tópicos visibles                                    | `/tf`, `/pose/raw`, `/pose/corrected`, `/markers` y `/metrics`.             |
+| Marco `world` y árbol de TF                         | Visible, con `world → odom → camera`.                                       |
+| Marcadores del mapa                                 | Los 6 cubos con etiquetas `ID 0` a `ID 5`.                                  |
+| Trayectorias                                        | Verde corregida en `world` y roja cruda en `odom`, separadas por la deriva. |
+| `/metrics`                                          | FPS cercano a 20 y latencia de procesamiento visible.                       |
+| `visible_markers` y `last_correction` en `/metrics` | Vacío y `null`, como se esperaba: el simulador no envía detecciones.        |
+
+No se adjuntó una captura de pantalla en esta corrida; la confirmación visual
+fue reportada por el usuario. La versión de Foxglove Studio se obtuvo del
+registro de programas instalados de Windows.
+
+Con esto se cumple el criterio de aceptación de la Fase 2. Queda diferida una
+sola verificación de integración: repetir el relay con el servidor HTTPS real y
+los certificados de mkcert, que se hará junto con el cliente móvil en la Fase 3.
+El layout exportado corresponde a la Fase 7 y todavía no existe.
 
 ## 5. Herramientas y artefactos
 
@@ -181,8 +195,9 @@ El servidor actual:
 
 ## 6. Verificaciones manuales pendientes
 
-Las siguientes pruebas no se pueden hacer sin hardware o sin Foxglove Studio.
-Quedan registradas como pendientes, no como aprobadas:
+Las siguientes pruebas no se pueden hacer sin el celular. Quedan registradas
+como pendientes, no como aprobadas. La validación de Foxglove Studio ya se
+registró en la sección 4.3.
 
 - [ ] `pnpm cert:setup` en PowerShell elevado y generación de certificados con
       mkcert.
@@ -197,8 +212,7 @@ Quedan registradas como pendientes, no como aprobadas:
 - [ ] La orientación de los ejes de WebXR coincide con el movimiento real
       (adelante, giros y vertical).
 - [ ] Se guardó el reporte JSON de `/ar-test.html` como evidencia.
-- [ ] Foxglove Studio muestra los cinco canales y el árbol de TF.
-- [ ] Las trayectorias y los marcadores se ven en el panel 3D.
+- [ ] Se repitió el relay con HTTPS real y los certificados de mkcert.
 - [ ] La telemetría real del celular llega por `wss://` al relay.
 
 ### Cómo registrar el resultado
@@ -213,8 +227,9 @@ nueva de este documento, indicando:
 - resultado de `enabledFeatures`;
 - errores observados.
 
-Para la Fase 2, anotar la versión de Foxglove Studio, la URL de conexión, los
-tópicos suscriptos y una captura del panel 3D con las dos trayectorias.
+La prueba de Foxglove del 2026-11-05 quedó registrada en la sección 4.3 con la
+versión 3.5.0 y la URL de conexión. Para futuras corridas, agregar una captura
+del panel 3D con las dos trayectorias.
 
 No modificar los resultados automáticos sin volver a ejecutar los comandos.
 
@@ -228,8 +243,8 @@ No modificar los resultados automáticos sin volver a ejecutar los comandos.
 3. **Emulador:** el emulador de Android Studio no implementa WebXR.
 4. **Mapa sintético:** las poses de los marcadores no provienen de una sala
    real y no se comprobó la orientación física.
-5. **Foxglove Studio:** todavía no se conectó la aplicación de escritorio; el
-   relay se verificó con tests y con el simulador, no con la GUI.
+5. **Foxglove Studio:** validado en escritorio con la versión 3.5.0; falta la
+   telemetría real del celular y una captura de evidencia.
 6. **Relay HTTPS:** el circuito manual de la Fase 2 se probó con `--http`; falta
    repetirlo con los certificados de mkcert.
 7. **mkcert:** requiere instalación y permisos de administrador. El script está
@@ -239,11 +254,12 @@ No modificar los resultados automáticos sin volver a ejecutar los comandos.
 
 ## 8. Próximo paso
 
-1. Validar la Fase 2 en Foxglove Studio con el simulador y registrar la
-   evidencia.
-2. Completar el checklist de la Fase 0 cuando haya un celular ARCore y
+1. Completar el checklist de la Fase 0 cuando haya un celular ARCore y
    `mkcert` disponible.
-3. Recién después avanzar a la Fase 3 (pose cruda en vivo desde el cliente).
+2. Avanzar a la Fase 3 (pose cruda en vivo desde el cliente) una vez cerrada la
+   Fase 0.
+3. Repetir el relay con HTTPS real durante la integración del celular.
 
-La Fase 2 no bloquea la Fase 3 desde el punto de vista del código, pero el
-proyecto mantiene la regla de cerrar una fase antes de iniciar la siguiente.
+La Fase 2 ya está cerrada y no bloquea la Fase 3 desde el punto de vista del
+código. El proyecto mantiene la regla de cerrar una fase antes de iniciar la
+siguiente.

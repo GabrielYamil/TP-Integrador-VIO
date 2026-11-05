@@ -226,9 +226,9 @@ Fecha de referencia: **2026-11-05**.
 - **Fase 2:** implementada en código a pedido del usuario, sin esperar el cierre
   de la Fase 0. Incluye el relay `/ingest`, la validación zod, el servidor
   Foxglove en `:8765`, los canales `/tf`, `/pose/*`, `/markers` y `/metrics`, y
-  el simulador `pnpm sim`. Los 13 tests del servidor pasan y el circuito local
-  se probó con el simulador. La validación en Foxglove Studio de escritorio y el
-  relay con HTTPS real están **pendientes**.
+  el simulador `pnpm sim`. Los 13 tests del servidor pasan. La validación visual
+  en Foxglove Studio 3.5.0 se completó el 2026-11-05; el relay con HTTPS real y
+  la telemetría del celular siguen **pendientes** para la Fase 3.
 - No hay datos de corridas reales, layout de Foxglove ni mapa medido en una
   sala real. La validación móvil de la Fase 0 se retoma cuando haya un celular
   ARCore disponible.
