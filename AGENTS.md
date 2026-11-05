@@ -215,7 +215,7 @@ inválidos con log.
 
 ## 5. Estado actual
 
-Fecha de referencia: **2026-11-03**.
+Fecha de referencia: **2026-11-05**.
 
 - **Fase 0:** implementada en código (monorepo, servidor HTTPS, certificados,
   páginas de diagnóstico, mock y documentación). La validación en celular real
@@ -223,10 +223,15 @@ Fecha de referencia: **2026-11-03**.
   `camera-access` en un dispositivo.
 - **Fase 1:** completada. 33 tests en 4 archivos; incluye el caso sintético de
   corrección con deriva y error menor a `1e-6`.
-- **Fase 2:** no iniciada. No avanzar hasta cerrar la validación manual de la
-  Fase 0 y recibir confirmación.
+- **Fase 2:** implementada en código a pedido del usuario, sin esperar el cierre
+  de la Fase 0. Incluye el relay `/ingest`, la validación zod, el servidor
+  Foxglove en `:8765`, los canales `/tf`, `/pose/*`, `/markers` y `/metrics`, y
+  el simulador `pnpm sim`. Los 13 tests del servidor pasan y el circuito local
+  se probó con el simulador. La validación en Foxglove Studio de escritorio y el
+  relay con HTTPS real están **pendientes**.
 - No hay datos de corridas reales, layout de Foxglove ni mapa medido en una
-  sala real.
+  sala real. La validación móvil de la Fase 0 se retoma cuando haya un celular
+  ARCore disponible.
 
 Las verificaciones pendientes están enumeradas en `docs/results.md` y en el
 checklist de `docs/setup.md`. El agente no debe inventar resultados de pruebas
@@ -262,6 +267,7 @@ pnpm cert:setup             # PowerShell elevado; requiere mkcert
 pnpm dev                    # Vite :5173 + servidor :8443
 pnpm build
 pnpm start                  # sirve dist en :8443
+pnpm sim                    # simulador contra /ingest
 pnpm typecheck
 pnpm test
 pnpm lint

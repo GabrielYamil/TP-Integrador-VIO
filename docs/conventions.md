@@ -199,7 +199,9 @@ const matrix32 = poseToWebXRMatrix(pose);
 - Ángulos: radianes.
 - Cuaterniones: `[x, y, z, w]`.
 - Tiempo: milisegundos. El celular usa `performance.now()` o el `time` del frame
-  XR; el servidor agrega su timestamp de recepción en la Fase 2.
+  XR; el servidor agrega su timestamp de recepción en `receivedAtMs`.
+- Foxglove usa nanosegundos: la conversión se hace una sola vez en
+  `packages/server/src/time.ts`.
 
 ## 8. Mensajes cliente -> servidor
 
@@ -262,7 +264,68 @@ haya una corrección de mapa.
 `{ ok: false, error }`. `parseClientMessageJson` hace lo mismo a partir del
 texto recibido por WebSocket.
 
-## 9. Mapa de marcadores
+## 9. Relay y publicación en Foxglove
+
+### 9.1. Ingesta `/ingest`
+
+El cliente se conecta por WebSocket seguro al mismo servidor HTTPS:
+
+```text
+wss://IP_DE_LA_PC:8443/ingest
+```
+
+Cada mensaje de texto se valida con `parseClientMessageJson`. Los mensajes
+inválidos, binarios o recibidos en otra ruta se descartan y se registran. El
+mensaje `hello` identifica el dispositivo y queda asociado a la conexión. El
+servidor agrega `receivedAtMs` a cada mensaje válido antes de publicarlo.
+
+### 9.2. Canales Foxglove
+
+Todos los canales usan `encoding: "json"` y `schemaEncoding: "jsonschema"`.
+
+| Tópico            | Esquema                    | Contenido                                        |
+| ----------------- | -------------------------- | ------------------------------------------------ |
+| `/tf`             | `foxglove.FrameTransforms` | `world→odom`, `odom→camera`, `world→marker_<id>` |
+| `/pose/raw`       | `foxglove.PoseInFrame`     | pose cruda en `odom`                             |
+| `/pose/corrected` | `foxglove.PoseInFrame`     | pose corregida en `world`                        |
+| `/markers`        | `foxglove.SceneUpdate`     | cubos, etiquetas y trayectorias                  |
+| `/metrics`        | `vio.Metrics`              | estado, FPS, latencia y corrección               |
+
+Foxglove Studio se conecta al servidor WebSocket en `ws://IP_DE_LA_PC:8765`.
+Ese canal no usa TLS porque queda en la red local; la telemetría del celular sí
+viaja por `wss` al puerto 8443.
+
+`T_world_odom` se obtiene de la pose corregida cuando el mensaje `pose` la
+incluye:
+
+```text
+T_world_odom = T_world_cam_corrected * inverse(T_odom_cam_raw)
+```
+
+Si no hay `corrected`, se usa `T_WORLD_ODOM_INITIAL`; por eso la pose
+"corregida" publicada todavía puede ser solo la rotación inicial a ROS hasta la
+Fase 6.
+
+La escena `/markers` incluye un cubo y una etiqueta por marcador del mapa, más
+`trajectory_raw` en `odom` (rojo) y `trajectory_corrected` en `world` (verde).
+Los TF de los marcadores son estáticos y se repiten periódicamente para los
+clientes que se conectan tarde.
+
+### 9.3. Tiempo y métricas
+
+Foxglove espera timestamps en nanosegundos. El servidor usa el instante de
+recepción (`receivedAtMs`, ms de época) y lo convierte a `bigint` para
+`sendMessage` y a `Time { sec, nsec }` para los esquemas `foxglove.*`. El
+timestamp del celular se conserva como `client_t_ms` en `/metrics`.
+
+`processing_latency_ms` mide solo el procesamiento del servidor. La latencia
+extremo a extremo no se puede calcular sin sincronizar los relojes del celular y
+la PC, y no se infiere de `client_t_ms - server_t_ms`.
+
+El layout de vista de Foxglove corresponde a la Fase 7 y todavía no está
+versionado.
+
+## 10. Mapa de marcadores
 
 `config/marker_map.json` usa el formato del plan:
 
@@ -288,7 +351,7 @@ texto recibido por WebSocket.
 - `orientation_xyzw` es la orientación del marco del marcador en `world`.
 - El esquema rechaza IDs duplicados y campos extra.
 
-## 10. Errores típicos
+## 11. Errores típicos
 
 1. **Aplicar `C_ROS_WEBXR` dos veces.** La pose cruda de WebXR ya está en
    `odom`; solo se rota una vez para visualizarla en `world`.

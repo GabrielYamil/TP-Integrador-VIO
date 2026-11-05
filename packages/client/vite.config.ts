@@ -33,6 +33,14 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      // Permite que el cliente use el mismo origen también en desarrollo:
+      // wss://IP:5173/ingest se reenvía al relay HTTPS de :8443.
+      '/ingest': {
+        target: 'https://127.0.0.1:8443',
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+      },
     },
   },
   preview: {

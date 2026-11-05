@@ -18,7 +18,8 @@
           Foxglove Studio visualiza la trayectoria en vivo.
         </p>
         <div class="badges">
-          <span class="badge"><strong>Fase 0 + 1</strong> código completo</span>
+          <span class="badge"><strong>Fase 0 + 1 + 2</strong> código completo</span>
+          <span class="badge">Foxglove Studio pendiente</span>
           <span class="badge">Validación móvil pendiente</span>
           <span class="badge">Android · Chrome</span>
           <span class="badge">WebXR + camera-access</span>
@@ -27,6 +28,7 @@
         <div class="actions">
           <a class="button primary" href="/ar-test.html">Probar AR en el celular</a>
           <a class="button" href="/mock.html">Modo mock (escritorio)</a>
+          <a class="button" href="/health">Estado JSON del servidor</a>
         </div>
       </header>
 
@@ -58,11 +60,15 @@ pnpm dev</code></pre>
             HTTPS de esta PC en el puerto 5173. Para la versión compilada:
             <code>pnpm build &amp;&amp; pnpm start</code> (puerto 8443).
           </p>
+          <p class="muted">
+            Sin celular, generá telemetría con <code>pnpm sim -- --drift</code> y conectá Foxglove
+            Studio a <code>ws://IP_DE_LA_PC:8765</code>.
+          </p>
           <p class="muted">Este equipo: <a id="local-url" href="/">—</a></p>
         </article>
 
         <article class="card">
-          <h2>Qué cubre la Fase 0 + 1</h2>
+          <h2>Qué cubre la Fase 0 + 1 + 2</h2>
           <ul class="plain">
             <li>Monorepo pnpm, TypeScript estricto, ESLint y Vitest.</li>
             <li>Matemática SE(3), conversiones WebXR/OpenCV/ROS y tests sintéticos.</li>
@@ -71,7 +77,27 @@ pnpm dev</code></pre>
               Página de diagnóstico de <code>immersive-ar</code> y <code>camera-access</code>.
             </li>
             <li>Mock de escritorio con webcam y pose simulada.</li>
+            <li>Relay <code>/ingest</code>, servidor Foxglove y simulador de trayectorias.</li>
           </ul>
+        </article>
+
+        <article class="card">
+          <h2>Relay y Foxglove (Fase 2)</h2>
+          <div class="status-line">
+            <span class="pill" id="relay-ingest" data-status="pending">Ingesta: verificando…</span>
+            <span class="pill" id="relay-foxglove" data-status="pending">
+              Foxglove: verificando…
+            </span>
+          </div>
+          <p class="muted">
+            Foxglove Studio se conecta a <code id="foxglove-url">ws://IP_DE_LA_PC:8765</code>.
+            Canales: <code>/tf</code>, <code>/pose/raw</code>, <code>/pose/corrected</code>,
+            <code>/markers</code> y <code>/metrics</code>.
+          </p>
+          <p class="muted">
+            El relay valida cada mensaje con zod. Los inválidos se descartan y se registran en la
+            consola del servidor.
+          </p>
         </article>
 
         <article class="card">
@@ -80,6 +106,7 @@ pnpm dev</code></pre>
             <li>Certificado aceptado por Chrome Android sin advertencias.</li>
             <li>La sesión AR inicia y entrega pose de tracking.</li>
             <li><code>camera-access</code> entrega textura de cámara en el celular real.</li>
+            <li>Foxglove Studio muestra los canales, el árbol de TF y las trayectorias.</li>
             <li>El emulador de Android Studio no implementa WebXR: no sirve para esto.</li>
           </ul>
         </article>

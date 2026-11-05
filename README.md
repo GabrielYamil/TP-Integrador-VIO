@@ -2,25 +2,30 @@
 
 Sitio web para Chrome Android que combina la pose de WebXR/ARCore con la
 detección de AprilTags 36h11 para corregir la deriva de localización. El
-servidor Node.js recibe la telemetría del celular y, en la Fase 2, la publica
-en Foxglove Studio por WebSocket.
+servidor Node.js recibe la telemetría del celular por un relay WebSocket seguro
+y la publica en Foxglove Studio por WebSocket.
 
 El proyecto es un monorepo pnpm con TypeScript estricto, ESLint y Vitest. La
 documentación y la interfaz están en español; el código y los tests en inglés.
 
 ## Estado actual
 
-| Fase                                | Estado                                                       |
-| ----------------------------------- | ------------------------------------------------------------ |
-| 0 — entorno, HTTPS y prueba AR      | Implementada en código. **Validación en celular pendiente.** |
-| 1 — matemática SE(3) y convenciones | Completada. 33 tests pasan.                                  |
-| 2 — relay y servidor Foxglove       | No iniciada.                                                 |
-| 3 a 10                              | Pendientes.                                                  |
+| Fase                                | Estado                                                               |
+| ----------------------------------- | -------------------------------------------------------------------- |
+| 0 — entorno, HTTPS y prueba AR      | Implementada en código. **Validación en celular pendiente.**         |
+| 1 — matemática SE(3) y convenciones | Completada. 33 tests pasan.                                          |
+| 2 — relay y servidor Foxglove       | Implementada en código. **Validación en Foxglove Studio pendiente.** |
+| 3 a 10                              | Pendientes.                                                          |
 
 La Fase 0 incluye el servidor HTTPS, el script de certificados, las páginas de
 diagnóstico WebXR y el modo mock de escritorio. Todavía no se validó
-`immersive-ar` ni `camera-access` en un celular real, y Foxglove todavía no está
-integrado. Ver `docs/results.md` para el detalle.
+`immersive-ar` ni `camera-access` en un celular real.
+
+La Fase 2 incluye el relay `/ingest`, la validación zod de los mensajes, el
+servidor Foxglove en `:8765`, la publicación de TF, poses, marcadores y métricas,
+y un simulador de cliente. El circuito está cubierto por tests de integración y
+se probó localmente con el simulador. Falta abrir Foxglove Studio de escritorio y
+confirmar los canales en vivo. Ver `docs/results.md` para el detalle.
 
 ## Arquitectura
 
@@ -45,9 +50,10 @@ PC: servidor Node.js
   Foxglove Studio (panel 3D, plots, mensajes)
 ```
 
-En las fases actuales existen las piezas de base: navegador, servidor HTTPS,
-matemática de poses, mapa demo y páginas de prueba. El relay, la detección y
-Foxglove se agregan en las fases siguientes.
+En las fases actuales existen el navegador, el servidor HTTPS, el relay
+`/ingest`, el servidor Foxglove, la matemática de poses, el mapa demo y el
+simulador. La detección y la corrección llegan en las fases 5 y 6; hasta
+entonces, el cliente de prueba es el simulador.
 
 ## Estructura
 
@@ -63,7 +69,7 @@ Foxglove se agregan en las fases siguientes.
 ├── packages/
 │   ├── shared/                # SE(3), convenciones, esquemas y mapa
 │   ├── client/                # Vite, WebXR y modo mock
-│   └── server/                # Express, HTTPS y estáticos
+│   └── server/                # HTTPS, relay /ingest, Foxglove y simulador
 ├── tools/
 │   ├── generate_markers.py    # PNG y PDF A4 de AprilTags
 │   ├── make_demo_map.py       # genera config/marker_map.json
@@ -118,6 +124,43 @@ pnpm start
 
 Abre `https://IP_DE_LA_PC:8443/`. `pnpm preview` combina ambos pasos.
 
+### Relay y Foxglove
+
+Con `pnpm dev` o `pnpm start`, el servidor monta:
+
+- el relay seguro `wss://IP_DE_LA_PC:8443/ingest`;
+- el servidor Foxglove `ws://IP_DE_LA_PC:8765`.
+
+Para probar el circuito sin celular, dejá el servidor corriendo y en otra
+terminal ejecutá:
+
+```powershell
+pnpm sim -- --trajectory circle --drift
+```
+
+El simulador envía `hello` y poses a 30 Hz. `--drift` separa la trayectoria
+cruda de la corregida para ver ambas en Foxglove. También acepta
+`--trajectory square`, `--rate 15`, `--duration 10`, `--url ws://...` y
+`--insecure`.
+
+En Foxglove Studio de escritorio:
+
+1. **Open connection** → **Foxglove WebSocket**.
+2. URL `ws://IP_DE_LA_PC:8765`.
+3. Habilitar los tópicos `/tf`, `/pose/raw`, `/pose/corrected`, `/markers` y
+   `/metrics`.
+
+| Tópico            | Esquema                    | Contenido                                        |
+| ----------------- | -------------------------- | ------------------------------------------------ |
+| `/tf`             | `foxglove.FrameTransforms` | `world→odom`, `odom→camera`, `world→marker_<id>` |
+| `/pose/raw`       | `foxglove.PoseInFrame`     | pose cruda en `odom`                             |
+| `/pose/corrected` | `foxglove.PoseInFrame`     | pose corregida en `world`                        |
+| `/markers`        | `foxglove.SceneUpdate`     | cubos, etiquetas y trayectorias                  |
+| `/metrics`        | `vio.Metrics`              | estado, FPS, latencia y corrección               |
+
+Todavía no hay layout exportado; el layout de la Fase 7 se versiona en
+`foxglove/`.
+
 ### Modo mock
 
 `pnpm dev` también sirve `https://IP_DE_LA_PC:5173/mock.html`: webcam real y pose
@@ -130,7 +173,7 @@ simulada en la convención de WebXR. No valida ARCore ni `camera-access`.
 | `/`             | Estado del entorno, enlaces y verificación del servidor.      |
 | `/ar-test.html` | Prueba de `immersive-ar`, reference spaces y `camera-access`. |
 | `/mock.html`    | Webcam y simulación de pose para escritorio.                  |
-| `/health`       | Estado del servidor en JSON, incluido el flag TLS.            |
+| `/health`       | Estado del servidor, la ingesta y Foxglove en JSON.           |
 
 ## Comandos
 
@@ -141,9 +184,10 @@ simulada en la convención de WebXR. No valida ARCore ni `camera-access`.
 | `pnpm dev:server`                   | Solo servidor Node con recarga.                               |
 | `pnpm build`                        | Compila el cliente multipágina en `packages/client/dist`.     |
 | `pnpm start`                        | Sirve el build con HTTPS en `:8443`.                          |
+| `pnpm sim`                          | Simulador de cliente contra `/ingest`.                        |
 | `pnpm preview`                      | `pnpm build` seguido de `pnpm start`.                         |
 | `pnpm typecheck`                    | TypeScript estricto en todos los paquetes.                    |
-| `pnpm test`                         | Vitest. En el estado actual: 4 archivos, 33 tests.            |
+| `pnpm test`                         | Vitest. En el estado actual: 7 archivos, 46 tests.            |
 | `pnpm lint`                         | ESLint.                                                       |
 | `pnpm format` / `pnpm format:check` | Prettier sobre el repo.                                       |
 | `pnpm cert:setup`                   | Genera certificados mkcert, exporta la CA y abre el firewall. |
@@ -202,15 +246,17 @@ pnpm format:check
 ```
 
 El estado de los tests automáticos y las verificaciones manuales pendientes se
-documenta en [`docs/results.md`](docs/results.md). La prueba en celular no se
-puede reemplazar con tests unitarios ni con el emulador.
+documenta en [`docs/results.md`](docs/results.md). En el estado actual hay 7
+archivos y 46 tests: 33 de `packages/shared` y 13 de `packages/server`. La
+prueba en celular no se puede reemplazar con tests unitarios ni con el emulador,
+y la conexión a Foxglove Studio sigue pendiente.
 
 ## Roadmap
 
 1. **Fase 0:** cerrar la validación en el celular (certificado, `immersive-ar`,
    tracking y `camera-access`).
-2. **Fase 2:** relay `/ingest` con validación zod, servidor Foxglove en `:8765`,
-   TF de marcadores y simulador de cliente.
+2. **Fase 2:** validar en Foxglove Studio el relay ya implementado: conexión,
+   canales, árbol de TF, trayectorias y métricas.
 3. **Fases 3–4:** pose cruda en vivo e imagen de cámara con intrínsecos.
 4. **Fases 5–6:** detección AprilTag, PnP y corrección de localización.
 5. **Fases 7–10:** layout de Foxglove, métricas, experimentos en sala,
@@ -220,9 +266,13 @@ puede reemplazar con tests unitarios ni con el emulador.
 
 - La validación real de WebXR y `camera-access` está bloqueada hasta conectar
   un celular ARCore.
+- Foxglove Studio todavía no se conectó; el relay se verificó con tests de
+  integración y con el simulador, no con la aplicación de escritorio.
 - El mapa actual es sintético; no se midió una sala real.
 - `@foxglove/ws-protocol` está deprecado, aunque se mantiene la versión elegida
   por el plan.
+- El servidor Foxglove usa `ws://` en la red local; el relay del celular sí usa
+  `wss://`.
 - El modo HTTP solo sirve para escritorio.
 - La red WiFi debe permitir tráfico entre PC y celular; si no, usar hotspot o
   `adb reverse`.

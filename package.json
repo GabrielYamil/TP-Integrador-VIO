@@ -10,6 +10,7 @@
     "dev:server": "pnpm --filter @vio/server dev",
     "build": "pnpm --filter @vio/client build",
     "start": "pnpm --filter @vio/server start",
+    "sim": "pnpm --filter @vio/server sim",
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "eslint .",

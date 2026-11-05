@@ -1,9 +1,9 @@
 # Puesta en marcha
 
-Esta guía cubre la instalación, los certificados HTTPS, la ejecución local y la
-verificación de la Fase 0. La validación en el celular es obligatoria: el
-emulador de Android Studio no implementa WebXR y no sirve para aceptar esta
-fase.
+Esta guía cubre la instalación, los certificados HTTPS, la ejecución local, la
+verificación de la Fase 0 y la prueba del relay y Foxglove de la Fase 2. La
+validación en el celular es obligatoria: el emulador de Android Studio no
+implementa WebXR y no sirve para aceptar la Fase 0.
 
 ## 1. Requisitos
 
@@ -150,7 +150,7 @@ interfaz WiFi.
 
 - Aceptá el aviso de Windows Firewall para Node.js si aparece.
 - Muchas redes universitarias o de invitados aíslan a los clientes. En ese caso
-  usá un hotspot propio o `adb reverse` (sección 7).
+  usá un hotspot propio o `adb reverse` (sección 8).
 
 ## 4. Ejecutar la aplicación
 
@@ -162,8 +162,10 @@ pnpm dev
 
 Se levantan dos procesos:
 
-- Vite en `https://IP_DE_LA_PC:5173/` (cliente, HMR y proxy de `/health`).
-- Servidor Node en `https://IP_DE_LA_PC:8443/` (TLS y `/health`).
+- Vite en `https://IP_DE_LA_PC:5173/` (cliente, HMR y proxy de `/health` y
+  `/ingest`).
+- Servidor Node en `https://IP_DE_LA_PC:8443/` (TLS, `/health`, relay `/ingest`
+  y servidor Foxglove en `ws://IP_DE_LA_PC:8765`).
 
 En el celular abrí la URL de Vite:
 
@@ -180,7 +182,8 @@ pnpm build
 pnpm start
 ```
 
-El servidor sirve `packages/client/dist` en `https://IP_DE_LA_PC:8443/`.
+El servidor sirve `packages/client/dist` en `https://IP_DE_LA_PC:8443/` y
+publica Foxglove en `ws://IP_DE_LA_PC:8765`.
 `pnpm preview` hace el build y arranca el servidor en un solo paso.
 
 Para desarrollo exclusivamente de escritorio, sin certificados, se puede
@@ -203,7 +206,7 @@ muestre Vite: `http://localhost:5173/mock.html` si no hay certificados, o
 | Inicio         | `/`             | Estado del entorno y accesos.                    |
 | Diagnóstico AR | `/ar-test.html` | Prueba real de `immersive-ar` y `camera-access`. |
 | Mock           | `/mock.html`    | Webcam y pose simulada en escritorio.            |
-| Salud          | `/health`       | JSON del servidor y del TLS.                     |
+| Salud          | `/health`       | JSON del servidor, la ingesta y Foxglove.        |
 
 ## 5. Verificación en la PC
 
@@ -219,7 +222,60 @@ muestre Vite: `http://localhost:5173/mock.html` si no hay certificados, o
 5. En `/ar-test.html`, desde la PC, la sesión AR probablemente no esté
    soportada. Eso no invalida la prueba: la sesión se valida en el celular.
 
-## 6. Verificación manual en el celular
+## 6. Relay y Foxglove (Fase 2)
+
+Esta verificación no necesita el celular: usa el simulador y Foxglove Studio de
+escritorio.
+
+1. Dejá el servidor corriendo con `pnpm dev` o, para la versión compilada,
+   `pnpm build` seguido de `pnpm start`.
+2. Abrí `https://localhost:8443/health` y comprobá que aparezcan los bloques
+   `ingest` y `foxglove` con el puerto 8765.
+3. En otra terminal, enviá una trayectoria de prueba:
+
+   ```powershell
+   pnpm sim -- --trajectory circle --drift --duration 15
+   ```
+
+   Sin `--duration` el simulador corre hasta `Ctrl+C`. El script usa
+   `certs/rootCA.pem` automáticamente si existe; con un certificado no confiado
+   se puede agregar `--insecure` solo para pruebas locales.
+
+4. Confirmá en `/health` que `messagesValid` aumentó, que `messagesInvalid`
+   quedó en 0 y que `byType.pose` es mayor que 0.
+5. Abrí Foxglove Studio → **Open connection** → **Foxglove WebSocket** → URL
+   `ws://IP_DE_LA_PC:8765`.
+6. Suscribite a `/tf`, `/pose/raw`, `/pose/corrected`, `/markers` y `/metrics`.
+7. En el panel 3D verificá:
+   - el árbol `world → odom → camera`;
+   - los seis marcadores del mapa demo;
+   - la trayectoria cruda en rojo (`odom`) y la corregida en verde (`world`);
+   - el cubo y la etiqueta de cada marcador.
+8. En `/metrics` verificá `tracking`, `fps`, `visible_markers` y
+   `processing_latency_ms`.
+
+### Flags del simulador
+
+| Flag           | Valor por defecto             | Uso                                         |
+| -------------- | ----------------------------- | ------------------------------------------- |
+| `--trajectory` | `circle`                      | `circle` o `square`.                        |
+| `--rate`       | `30`                          | Frecuencia de poses en Hz.                  |
+| `--duration`   | `0`                           | Segundos; `0` corre hasta `Ctrl+C`.         |
+| `--drift`      | desactivado                   | Separa la pose cruda de la corregida.       |
+| `--url`        | `wss://localhost:8443/ingest` | Destino del relay.                          |
+| `--device`     | `sim-client`                  | Nombre enviado en el mensaje `hello`.       |
+| `--insecure`   | desactivado                   | No verifica TLS; solo para pruebas locales. |
+| `--log-level`  | `info`                        | `debug`, `info`, `warn`, `error`, `silent`. |
+
+El servidor Foxglove usa `ws://` sin TLS porque queda en la red local. La
+telemetría del celular sí viaja por `wss://` al puerto 8443.
+
+Si Foxglove no muestra los tópicos, revisá en `/health` el campo
+`foxglove.subscribed_topics` y la consola del servidor. Para diagnosticar el
+relay, ejecutá el simulador con `--log-level debug` y mirá los mensajes
+`[server:ingest]`.
+
+## 7. Verificación manual en el celular
 
 Esta es la parte que cierra el criterio de aceptación de la Fase 0. Anotá el
 resultado en `docs/results.md` o adjuntá el reporte copiado desde la página.
@@ -246,11 +302,11 @@ resultado en `docs/results.md` o adjuntá el reporte copiado desde la página.
 - **Sesión AR inicia y tracking OK:** se cumple el criterio de Fase 0.
 - **Sesión AR inicia pero `camera-access` no está disponible:** la Fase 3 puede
   continuar con solo VIO, pero la Fase 4 queda bloqueada. Anotarlo como riesgo.
-- **No inicia:** revisar la sección 7 y no avanzar a la Fase 2 hasta resolverlo.
+- **No inicia:** revisar la sección 8 y no avanzar a la Fase 3 hasta resolverlo.
 - **Certificado inválido:** no seguir; WebXR no funciona de forma confiable sin
   un contexto seguro válido.
 
-## 7. Solución de problemas
+## 8. Solución de problemas
 
 ### El servidor no arranca: faltan certificados
 
@@ -343,7 +399,7 @@ el tráfico sigue pasando por el cable USB.
 3. Inspeccioná la pestaña del celular.
 4. Revisá errores de certificado, permisos y WebXR en la consola.
 
-## 8. Checklist de Fase 0
+## 9. Checklist de Fase 0
 
 - [ ] `pnpm install` sin errores.
 - [ ] `pnpm cert:setup` ejecutado y certificados generados.
@@ -358,3 +414,18 @@ el tráfico sigue pasando por el cable USB.
 La Fase 0 queda cerrada cuando todos los ítems anteriores tienen un resultado
 explícito. La Fase 1 (matemática y convenciones) ya está cubierta por tests
 automáticos; ver `docs/results.md`.
+
+### Checklist de Fase 2
+
+- [ ] `pnpm test` pasa los 13 tests del servidor.
+- [ ] `/health` muestra los bloques `ingest` y `foxglove`.
+- [ ] `pnpm sim` envía poses y `messagesValid` aumenta.
+- [ ] Foxglove Studio se conecta a `ws://IP_DE_LA_PC:8765`.
+- [ ] Se ven los cinco tópicos y el árbol `world → odom → camera`.
+- [ ] Se ven los seis marcadores y las dos trayectorias.
+- [ ] `/metrics` muestra tracking, FPS y latencia de procesamiento.
+- [ ] La prueba se registra en `docs/results.md`.
+
+La Fase 2 no se declara cerrada hasta que Foxglove Studio muestre los canales en
+vivo. La validación móvil de la Fase 0 sigue pendiente y se retoma cuando haya un
+celular ARCore disponible.
