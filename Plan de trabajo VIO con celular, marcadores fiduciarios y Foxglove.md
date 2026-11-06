@@ -1,15 +1,5 @@
 # Plan de trabajo: VIO con celular, marcadores fiduciarios y Foxglove
 
-Documento pensado para ser entregado a un agente de programación (OpenCode u otro). Cada fase tiene tareas concretas, entregables y criterios de aceptación verificables.
-
-## 0. Cómo usar este documento con el agente
-
-1. Copiá las secciones 1 a 4 en un archivo `AGENTS.md` en la raíz del repo (es el contexto fijo del proyecto).
-2. Pedile al agente **una fase por vez** (sección 5), indicando: "Implementá la Fase N. No avances a la siguiente hasta que se cumplan los criterios de aceptación".
-3. Después de cada fase, probá vos en el celular real y hacé commit. Los problemas de WebXR y ejes casi nunca se detectan solo con tests unitarios.
-4. Las tareas marcadas **\[HUMANO\]** requieren hardware, mediciones o decisiones tuyas; el agente no puede hacerlas.
-5. Verificá en la documentación oficial las versiones vigentes de WebXR, Foxglove y las librerías antes de fijarlas (esto cambia con frecuencia).
-
 ## 1. Decisiones de arquitectura (fijas)
 
 | Aspecto | Decisión |
