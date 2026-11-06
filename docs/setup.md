@@ -101,6 +101,10 @@ El script `tools/setup-certs.ps1`:
 4. Crea reglas de firewall para TCP 5173, 8443 y 8765 en el perfil privado, si
    la consola está elevada.
 
+Si ejecutás el script sin elevación, los certificados y la CA se generan igual,
+pero las reglas de firewall no se crean; el script imprime el bloque
+`New-NetFirewallRule` para ejecutarlo aparte en una consola de administrador.
+
 Si cambia la IP de la PC, volvé a ejecutar `pnpm cert:setup`.
 
 > Los archivos de `certs/` son secretos locales y están ignorados por git. No
@@ -401,11 +405,12 @@ el tráfico sigue pasando por el cable USB.
 
 ## 9. Checklist de Fase 0
 
-- [ ] `pnpm install` sin errores.
-- [ ] `pnpm cert:setup` ejecutado y certificados generados.
+- [x] `pnpm install` sin errores.
+- [x] `pnpm cert:setup` ejecutado y certificados generados con mkcert.
+- [ ] Reglas de firewall para 5173, 8443 y 8765 creadas en PowerShell elevado.
 - [ ] CA instalada en Android como CA de usuario.
 - [ ] `https://IP_DE_LA_PC:5173/` abre sin advertencia.
-- [ ] `/health` responde por HTTPS con `tls: true`.
+- [x] `/health` responde por HTTPS con `tls: true` y certificado válido.
 - [ ] `/ar-test.html` inicia una sesión `immersive-ar`.
 - [ ] La sesión entrega tracking y FPS.
 - [ ] Se conoce el estado de `camera-access`.
@@ -426,7 +431,8 @@ automáticos; ver `docs/results.md`.
 - [x] `/metrics` muestra tracking, FPS y latencia de procesamiento.
 - [x] La prueba se registra en `docs/results.md`.
 
-La Fase 2 quedó cerrada el **2026-11-05** con Foxglove Studio **3.5.0**. Queda
-pendiente repetir el relay con HTTPS real y los certificados de mkcert durante la
-integración del celular. La validación móvil de la Fase 0 sigue pendiente y se
-retoma cuando haya un celular ARCore disponible.
+La Fase 2 quedó cerrada el **2026-11-05** con Foxglove Studio **3.5.0**. El
+relay con HTTPS real y mkcert se verificó el **2026-11-06** con el simulador.
+Queda pendiente la telemetría del celular y repetir el relay por la IP LAN. La
+validación móvil de la Fase 0 sigue pendiente y se retoma cuando haya un celular
+ARCore disponible.

@@ -215,20 +215,22 @@ inválidos con log.
 
 ## 5. Estado actual
 
-Fecha de referencia: **2026-11-05**.
+Fecha de referencia: **2026-11-06**.
 
 - **Fase 0:** implementada en código (monorepo, servidor HTTPS, certificados,
-  páginas de diagnóstico, mock y documentación). La validación en celular real
-  está **pendiente**: no hay todavía un reporte de `immersive-ar` ni de
-  `camera-access` en un dispositivo.
+  páginas de diagnóstico, mock y documentación). Los certificados de mkcert se
+  generaron el 2026-11-06 y el HTTPS local está verificado. La validación en
+  celular real está **pendiente**: falta instalar la CA en Android, crear las
+  reglas de firewall y obtener un reporte de `immersive-ar` y `camera-access`.
 - **Fase 1:** completada. 33 tests en 4 archivos; incluye el caso sintético de
   corrección con deriva y error menor a `1e-6`.
 - **Fase 2:** implementada en código a pedido del usuario, sin esperar el cierre
   de la Fase 0. Incluye el relay `/ingest`, la validación zod, el servidor
   Foxglove en `:8765`, los canales `/tf`, `/pose/*`, `/markers` y `/metrics`, y
   el simulador `pnpm sim`. Los 13 tests del servidor pasan. La validación visual
-  en Foxglove Studio 3.5.0 se completó el 2026-11-05; el relay con HTTPS real y
-  la telemetría del celular siguen **pendientes** para la Fase 3.
+  en Foxglove Studio 3.5.0 se completó el 2026-11-05 y el relay por `wss` con
+  mkcert se verificó el 2026-11-06. La telemetría real del celular sigue
+  **pendiente** para la Fase 3.
 - No hay datos de corridas reales, layout de Foxglove ni mapa medido en una
   sala real. La validación móvil de la Fase 0 se retoma cuando haya un celular
   ARCore disponible.
@@ -263,7 +265,7 @@ en celular.
 ```powershell
 pnpm install
 pnpm approve-builds --all   # solo si pnpm lo solicita
-pnpm cert:setup             # PowerShell elevado; requiere mkcert
+pnpm cert:setup             # requiere mkcert; PowerShell elevado para firewall
 pnpm dev                    # Vite :5173 + servidor :8443
 pnpm build
 pnpm start                  # sirve dist en :8443

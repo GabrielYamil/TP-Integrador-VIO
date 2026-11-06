@@ -1,6 +1,6 @@
 # Resultados y estado de validación
 
-Última actualización: **2026-11-05**.
+Última actualización: **2026-11-06**.
 
 Alcance de este informe: **Fase 0 (entorno, HTTPS y prueba AR)**, **Fase 1
 (matemática SE(3) y convenciones)** y **Fase 2 (relay y Foxglove)**. Las fases 3
@@ -8,15 +8,17 @@ a 10 todavía no se implementaron.
 
 ## 1. Resumen
 
-| Fase                          | Estado         | Observación                                                                                                                             |
-| ----------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| 0 — entorno y HTTPS           | **Parcial**    | El circuito PC está verificado. La aceptación depende de la prueba en celular real, que sigue pendiente.                                |
-| 1 — matemática y convenciones | **Completada** | 33 tests automáticos pasan, incluido el caso sintético de corrección.                                                                   |
-| 2 — relay y Foxglove          | **Completada** | 13 tests del servidor. Validada visualmente en Foxglove Studio 3.5.0 el 2026-11-05. Falta repetir el relay con HTTPS real y el celular. |
+| Fase                          | Estado         | Observación                                                                                                              |
+| ----------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| 0 — entorno y HTTPS           | **Parcial**    | El circuito PC está verificado. La aceptación depende de la prueba en celular real, que sigue pendiente.                 |
+| 1 — matemática y convenciones | **Completada** | 33 tests automáticos pasan, incluido el caso sintético de corrección.                                                    |
+| 2 — relay y Foxglove          | **Completada** | 13 tests del servidor. Foxglove Studio 3.5.0 el 2026-11-05 y relay HTTPS el 2026-11-06. Falta la telemetría del celular. |
 
 La Fase 0 no se declara cerrada hasta que Chrome Android acepte el certificado
 e inicie una sesión `immersive-ar` con tracking. En esta máquina no hay un
-celular conectado y `mkcert` no está instalado, así que esa parte no se ejecutó.
+celular conectado. El 2026-11-06 se instaló `mkcert`, se generaron los
+certificados y se verificó HTTPS local; falta instalar la CA en Android y
+repetir la prueba desde el teléfono.
 
 La Fase 2 se implementó a pedido explícito, sin esperar el cierre de la Fase 0.
 Su criterio de aceptación se cumplió: Foxglove Studio mostró el marco `world`,
@@ -61,33 +63,36 @@ Incluye una pose sin `corrected` para comprobar el uso de
 
 ## 3. Verificación del servidor HTTPS
 
-Se validó el circuito con un certificado autofirmado temporal para
-`localhost`, `127.0.0.1` y la IP WiFi de la PC. El certificado y la clave se
-borraron después de la prueba; no forman parte del repositorio ni del
-procedimiento normal.
+El **2026-11-06** se instaló `mkcert` 1.4.4 con `winget` y se ejecutó
+`pnpm cert:setup`. Se generaron certificados para `localhost`, `127.0.0.1`,
+`::1` y las IPv4 LAN detectadas (`192.168.1.18`, `192.168.56.1` y
+`172.19.144.1`). La CA quedó en `certs/rootCA.pem`, lista para instalar en
+Android. El servidor y Vite se validaron de nuevo con estos certificados.
 
-| Prueba                                               | Resultado                                               |
-| ---------------------------------------------------- | ------------------------------------------------------- |
-| `https://localhost:8443/health`                      | HTTP 200, `status: ok`, `tls: true`.                    |
-| `https://127.0.0.1:8443/health` con verificación TLS | HTTP 200, certificado válido.                           |
-| `/` en `:8443`                                       | HTTP 200.                                               |
-| `/ar-test.html` en `:8443`                           | HTTP 200.                                               |
-| `/mock.html` en `:8443`                              | HTTP 200.                                               |
-| Assets JS/CSS del build                              | HTTP 200.                                               |
-| Vite en `https://localhost:5173/`                    | HTTP 200.                                               |
-| Proxy `/health` de Vite hacia `:8443`                | HTTP 200 con `tls: true`.                               |
-| `pnpm dev` con cliente y servidor                    | Ambos procesos arrancaron y sirvieron las tres páginas. |
+| Prueba                                               | Resultado                                                |
+| ---------------------------------------------------- | -------------------------------------------------------- |
+| `https://localhost:8443/health`                      | HTTP 200, `status: ok`, `tls: true`.                     |
+| `https://127.0.0.1:8443/health` con verificación TLS | HTTP 200, certificado válido.                            |
+| `/` en `:8443`                                       | HTTP 200.                                                |
+| `/ar-test.html` en `:8443`                           | HTTP 200.                                                |
+| `/mock.html` en `:8443`                              | HTTP 200.                                                |
+| Assets JS/CSS del build                              | HTTP 200.                                                |
+| Vite en `https://localhost:5173/`                    | HTTP 200.                                                |
+| Proxy `/health` de Vite hacia `:8443`                | HTTP 200 con `tls: true`.                                |
+| `pnpm dev` con cliente y servidor                    | Ambos procesos arrancaron y sirvieron las tres páginas.  |
+| Relay `wss://localhost:8443/ingest`                  | 37 mensajes válidos, 0 inválidos; CA de mkcert aceptada. |
 
 ### Lo que falta verificar
 
-La prueba anterior demuestra que el servidor y Vite hablan HTTPS, pero **no**
-demuestra que el certificado de mkcert esté instalado en Android ni que Chrome
-Android lo acepte. Para cerrar la Fase 0 hay que ejecutar el checklist de
-`docs/setup.md` con `pnpm cert:setup`, instalar `certs/rootCA.pem` y abrir la
-URL desde el celular.
+La prueba anterior demuestra que el servidor y Vite hablan HTTPS y que el relay
+acepta `wss` con la CA de mkcert en Windows, pero **no** demuestra que la CA esté
+instalada en Android ni que Chrome Android la acepte. Para cerrar la Fase 0 hay
+que instalar `certs/rootCA.pem` en el celular, crear las reglas de firewall (la
+consola no estaba elevada) y abrir la URL desde el teléfono.
 
-El relay `/ingest` sobre HTTPS tampoco se probó manualmente con un certificado
-real: la prueba local de la sección 4 se hizo con `--http`.
+El relay `/ingest` sobre HTTPS ya se probó con un certificado real: el simulador
+se conectó a `wss://localhost:8443/ingest` usando `certs/rootCA.pem` como CA y
+envió 37 mensajes válidos sin errores.
 
 ## 4. Verificación de la Fase 2
 
@@ -154,10 +159,10 @@ No se adjuntó una captura de pantalla en esta corrida; la confirmación visual
 fue reportada por el usuario. La versión de Foxglove Studio se obtuvo del
 registro de programas instalados de Windows.
 
-Con esto se cumple el criterio de aceptación de la Fase 2. Queda diferida una
-sola verificación de integración: repetir el relay con el servidor HTTPS real y
-los certificados de mkcert, que se hará junto con el cliente móvil en la Fase 3.
-El layout exportado corresponde a la Fase 7 y todavía no existe.
+Con esto se cumple el criterio de aceptación de la Fase 2. El 2026-11-06 también
+se verificó el relay con el servidor HTTPS real: el simulador usó
+`wss://localhost:8443/ingest` y la CA de mkcert sin `--insecure`. Queda pendiente
+la telemetría del celular y el layout exportado, que corresponde a la Fase 7.
 
 ## 5. Herramientas y artefactos
 
@@ -199,8 +204,11 @@ Las siguientes pruebas no se pueden hacer sin el celular. Quedan registradas
 como pendientes, no como aprobadas. La validación de Foxglove Studio ya se
 registró en la sección 4.3.
 
-- [ ] `pnpm cert:setup` en PowerShell elevado y generación de certificados con
-      mkcert.
+- [x] `pnpm cert:setup` ejecutado y certificados generados con mkcert.
+- [x] `/health` responde por HTTPS con `tls: true` y certificado válido.
+- [x] El relay acepta `wss://` con la CA de mkcert y mensajes válidos.
+- [ ] Reglas de firewall para TCP 5173, 8443 y 8765 creadas en PowerShell
+      elevado.
 - [ ] Instalación de `rootCA.pem` como CA de usuario en Android.
 - [ ] `https://IP_DE_LA_PC:5173/` abre en Chrome Android sin advertencias.
 - [ ] La página de inicio detecta contexto seguro y servidor disponible.
@@ -212,7 +220,6 @@ registró en la sección 4.3.
 - [ ] La orientación de los ejes de WebXR coincide con el movimiento real
       (adelante, giros y vertical).
 - [ ] Se guardó el reporte JSON de `/ar-test.html` como evidencia.
-- [ ] Se repitió el relay con HTTPS real y los certificados de mkcert.
 - [ ] La telemetría real del celular llega por `wss://` al relay.
 
 ### Cómo registrar el resultado
@@ -245,21 +252,22 @@ No modificar los resultados automáticos sin volver a ejecutar los comandos.
    real y no se comprobó la orientación física.
 5. **Foxglove Studio:** validado en escritorio con la versión 3.5.0; falta la
    telemetría real del celular y una captura de evidencia.
-6. **Relay HTTPS:** el circuito manual de la Fase 2 se probó con `--http`; falta
-   repetirlo con los certificados de mkcert.
-7. **mkcert:** requiere instalación y permisos de administrador. El script está
-   preparado, pero no se ejecutó en esta máquina.
+6. **Relay HTTPS:** validado con `wss://localhost:8443/ingest` y la CA de mkcert.
+   Falta repetirlo desde el celular por la IP LAN.
+7. **mkcert:** instalado y con certificados generados; la CA todavía no está
+   instalada en Android y las reglas de firewall requieren una consola elevada.
 8. **`@foxglove/ws-protocol` 0.8.0:** está deprecado; se usa igual por la
    decisión del proyecto y se revisará si aparece un problema de compatibilidad.
 
 ## 8. Próximo paso
 
-1. Completar el checklist de la Fase 0 cuando haya un celular ARCore y
-   `mkcert` disponible.
-2. Avanzar a la Fase 3 (pose cruda en vivo desde el cliente) una vez cerrada la
+1. Instalar `certs/rootCA.pem` en el celular y crear las reglas de firewall en
+   una consola elevada.
+2. Completar el checklist de la Fase 0 cuando haya un celular ARCore.
+3. Avanzar a la Fase 3 (pose cruda en vivo desde el cliente) una vez cerrada la
    Fase 0.
-3. Repetir el relay con HTTPS real durante la integración del celular.
+4. Repetir el relay por la IP LAN durante la integración del celular.
 
-La Fase 2 ya está cerrada y no bloquea la Fase 3 desde el punto de vista del
-código. El proyecto mantiene la regla de cerrar una fase antes de iniciar la
-siguiente.
+La Fase 2 está cerrada, incluido el relay HTTPS con mkcert, y no bloquea la
+Fase 3 desde el punto de vista del código. El proyecto mantiene la regla de
+cerrar una fase antes de iniciar la siguiente.

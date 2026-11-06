@@ -27,3 +27,6 @@ build/
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Certificados y claves locales de mkcert
+certs/

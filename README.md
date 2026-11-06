@@ -18,15 +18,17 @@ documentación y la interfaz están en español; el código y los tests en ingl�
 | 3 a 10                              | Pendientes.                                                  |
 
 La Fase 0 incluye el servidor HTTPS, el script de certificados, las páginas de
-diagnóstico WebXR y el modo mock de escritorio. Todavía no se validó
-`immersive-ar` ni `camera-access` en un celular real.
+diagnóstico WebXR y el modo mock de escritorio. Los certificados de mkcert se
+generaron el 2026-11-06 y el HTTPS local está verificado; falta instalar la CA
+en Android y validar `immersive-ar` y `camera-access` en un celular real.
 
 La Fase 2 incluye el relay `/ingest`, la validación zod de los mensajes, el
 servidor Foxglove en `:8765`, la publicación de TF, poses, marcadores y métricas,
 y un simulador de cliente. El circuito está cubierto por tests de integración y
 se validó visualmente en Foxglove Studio 3.5.0 el 2026-11-05: se vieron los cinco
-tópicos, los seis marcadores y las dos trayectorias. Falta repetir el relay con
-HTTPS real durante la integración móvil. Ver `docs/results.md` para el detalle.
+tópicos, los seis marcadores y las dos trayectorias. El relay por `wss` con el
+certificado de mkcert también se verificó localmente. Falta la telemetría real
+del celular y repetir el relay por la IP LAN. Ver `docs/results.md`.
 
 ## Arquitectura
 
