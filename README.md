@@ -15,7 +15,8 @@ documentación y la interfaz están en español; el código y los tests en ingl�
 | 0 — entorno, HTTPS y prueba AR      | Implementada en código. **Validación en celular pendiente.** |
 | 1 — matemática SE(3) y convenciones | Completada. 33 tests pasan.                                  |
 | 2 — relay y servidor Foxglove       | Completada. Validada en Foxglove Studio 3.5.0.               |
-| 3 a 10                              | Pendientes.                                                  |
+| 3 — cliente WebXR y pose cruda      | Implementada en código. **Validación en celular pendiente.** |
+| 4 a 10                              | Pendientes.                                                  |
 
 La Fase 0 incluye el servidor HTTPS, el script de certificados, las páginas de
 diagnóstico WebXR y el modo mock de escritorio. Los certificados de mkcert se
@@ -29,6 +30,13 @@ se validó visualmente en Foxglove Studio 3.5.0 el 2026-11-05: se vieron los cin
 tópicos, los seis marcadores y las dos trayectorias. El relay por `wss` con el
 certificado de mkcert también se verificó localmente. Falta la telemetría real
 del celular y repetir el relay por la IP LAN. Ver `docs/results.md`.
+
+La Fase 3 agrega `/ar.html`: sesión `immersive-ar`, reference space
+`local-floor` con fallback a `local`, overlay con tracking/FPS/conexión y envío
+de pose cruda en `odom` a ~30 Hz. El cliente WebSocket reconecta con backoff,
+mantiene un buffer acotado y descarta mensajes viejos. La pose corregida la
+deriva el servidor con `T_WORLD_ODOM_INITIAL`. Los 7 tests del transporte pasan;
+la validación en celular sigue pendiente.
 
 ## Arquitectura
 
@@ -54,9 +62,10 @@ PC: servidor Node.js
 ```
 
 En las fases actuales existen el navegador, el servidor HTTPS, el relay
-`/ingest`, el servidor Foxglove, la matemática de poses, el mapa demo y el
-simulador. La detección y la corrección llegan en las fases 5 y 6; hasta
-entonces, el cliente de prueba es el simulador.
+`/ingest`, el servidor Foxglove, la matemática de poses, el mapa demo, el
+simulador y el cliente `/ar.html`, que ya envía la pose cruda de WebXR. La
+detección y la corrección llegan en las fases 5 y 6; hasta entonces, la pose
+corregida se deriva con `T_WORLD_ODOM_INITIAL`.
 
 ## Estructura
 
@@ -112,7 +121,9 @@ Luego:
 2. Conectá el celular a la misma WiFi que la PC.
 3. Abrí `https://IP_DE_LA_PC:5173/` en Chrome Android.
 4. Verificá que el certificado no muestre advertencias.
-5. Entrá a **Probar AR en el celular** y ejecutá la prueba de sesión.
+5. Entrá a **Abrir cliente AR (Fase 3)** (`/ar.html`) y presioná **Iniciar AR**.
+6. Para inspeccionar `camera-access` y copiar un reporte, usá **Diagnóstico
+   WebXR** (`/ar-test.html`).
 
 La guía completa, incluidas las variantes de Android para instalar la CA, el
 firewall, `adb reverse` y la solución de problemas, está en
@@ -171,12 +182,13 @@ simulada en la convención de WebXR. No valida ARCore ni `camera-access`.
 
 ## Páginas
 
-| Ruta            | Descripción                                                   |
-| --------------- | ------------------------------------------------------------- |
-| `/`             | Estado del entorno, enlaces y verificación del servidor.      |
-| `/ar-test.html` | Prueba de `immersive-ar`, reference spaces y `camera-access`. |
-| `/mock.html`    | Webcam y simulación de pose para escritorio.                  |
-| `/health`       | Estado del servidor, la ingesta y Foxglove en JSON.           |
+| Ruta            | Descripción                                                         |
+| --------------- | ------------------------------------------------------------------- |
+| `/`             | Estado del entorno, enlaces y verificación del servidor.            |
+| `/ar.html`      | Cliente de la Fase 3: sesión AR, overlay y pose cruda al relay.     |
+| `/ar-test.html` | Prueba de `immersive-ar`, reference spaces y `camera-access`.       |
+| `/mock.html`    | Webcam y simulación de pose para escritorio.                        |
+| `/health`       | Estado del servidor, la ingesta y Foxglove en JSON.                 |
 
 ## Comandos
 
@@ -190,7 +202,7 @@ simulada en la convención de WebXR. No valida ARCore ni `camera-access`.
 | `pnpm sim`                          | Simulador de cliente contra `/ingest`.                        |
 | `pnpm preview`                      | `pnpm build` seguido de `pnpm start`.                         |
 | `pnpm typecheck`                    | TypeScript estricto en todos los paquetes.                    |
-| `pnpm test`                         | Vitest. En el estado actual: 7 archivos, 46 tests.            |
+| `pnpm test`                         | Vitest. En el estado actual: 8 archivos, 53 tests.            |
 | `pnpm lint`                         | ESLint.                                                       |
 | `pnpm format` / `pnpm format:check` | Prettier sobre el repo.                                       |
 | `pnpm cert:setup`                   | Genera certificados mkcert, exporta la CA y abre el firewall. |
@@ -249,19 +261,21 @@ pnpm format:check
 ```
 
 El estado de los tests automáticos y las verificaciones manuales pendientes se
-documenta en [`docs/results.md`](docs/results.md). En el estado actual hay 7
-archivos y 46 tests: 33 de `packages/shared` y 13 de `packages/server`. La
-prueba en celular no se puede reemplazar con tests unitarios ni con el emulador.
-La conexión a Foxglove Studio se validó en escritorio; la telemetría real del
-celular sigue pendiente.
+documenta en [`docs/results.md`](docs/results.md). En el estado actual hay 8
+archivos y 53 tests: 33 de `packages/shared`, 7 de `packages/client` y 13 de
+`packages/server`. La prueba en celular no se puede reemplazar con tests
+unitarios ni con el emulador. La conexión a Foxglove Studio se validó en
+escritorio; la telemetría real del celular sigue pendiente.
 
 ## Roadmap
 
 1. **Fase 0:** cerrar la validación en el celular (certificado, `immersive-ar`,
    tracking y `camera-access`).
 2. **Fase 2:** completada. Relay, Foxglove y simulador validados en escritorio.
-3. **Fases 3–4:** pose cruda en vivo e imagen de cámara con intrínsecos.
-4. **Fases 5–6:** detección AprilTag, PnP y corrección de localización.
+3. **Fase 3:** implementada en código. Falta validar la pose en vivo y los ejes
+   en un celular ARCore.
+4. **Fases 4–6:** imagen de cámara con intrínsecos, detección AprilTag, PnP y
+   corrección de localización.
 5. **Fases 7–10:** layout de Foxglove, métricas, experimentos en sala,
    documentación e informe final.
 
@@ -269,6 +283,8 @@ celular sigue pendiente.
 
 - La validación real de WebXR y `camera-access` está bloqueada hasta conectar
   un celular ARCore.
+- La pose cruda de `/ar.html` no se probó todavía en un dispositivo real; el
+  criterio de aceptación de la Fase 3 sigue pendiente.
 - Foxglove Studio se validó en escritorio con la versión 3.5.0; falta la
   telemetría real del celular y una captura de evidencia.
 - El mapa actual es sintético; no se midió una sala real.

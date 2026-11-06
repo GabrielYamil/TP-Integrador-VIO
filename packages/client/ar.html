@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#070b16" />
+    <title>Cliente AR · VIO</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body class="ar-body">
+    <canvas id="xr-canvas" aria-hidden="true"></canvas>
+    <div id="reticle" class="reticle" hidden></div>
+
+    <main class="page ar-ui" id="start-screen">
+      <header class="ar-header">
+        <div>
+          <p class="eyebrow">Fase 3 · pose cruda en vivo</p>
+          <h1>Cliente AR</h1>
+          <p class="lead">
+            La pose de WebXR/ARCore se envía al relay y aparece en Foxglove Studio como
+            <code>/pose/raw</code> en el marco <code>odom</code>. La corrección con marcadores llega
+            en la Fase 4.
+          </p>
+        </div>
+        <a class="button small" href="/">Volver</a>
+      </header>
+
+      <section class="grid">
+        <article class="card wide">
+          <h2>Estado</h2>
+          <div class="status-line">
+            <span class="pill" id="secure-state" data-status="pending">HTTPS: verificando…</span>
+            <span class="pill" id="support-state" data-status="pending">
+              immersive-ar: verificando…
+            </span>
+            <span class="pill" id="session-state" data-status="pending">Sesión: inactiva</span>
+            <span class="pill" id="ingest-state" data-status="pending">Relay: verificando…</span>
+          </div>
+
+          <dl class="kv">
+            <dt>Relay</dt>
+            <dd id="ingest-url">—</dd>
+            <dt>Frecuencia</dt>
+            <dd><span id="pose-hz">30</span> Hz</dd>
+            <dt>Foxglove</dt>
+            <dd id="foxglove-url">—</dd>
+          </dl>
+
+          <p class="muted" id="hint">
+            Abrí esta página desde Chrome Android por HTTPS, con la CA de mkcert instalada.
+          </p>
+
+          <div class="actions">
+            <button class="button primary" id="start" type="button" disabled>Iniciar AR</button>
+            <a class="button" href="/ar-test.html">Diagnóstico WebXR</a>
+            <a class="button" href="/">Inicio</a>
+          </div>
+        </article>
+
+        <article class="card wide">
+          <h2>Registro</h2>
+          <div class="log" id="log" aria-live="polite"></div>
+        </article>
+      </section>
+    </main>
+
+    <div id="overlay" class="overlay" hidden>
+      <div class="overlay-panel">
+        <h2>Pose en vivo</h2>
+        <div class="row">
+          <span>Tracking: <strong id="overlay-tracking">—</strong></span>
+          <span>FPS: <strong id="overlay-fps">—</strong></span>
+          <span>Marcadores: <strong id="overlay-markers">0</strong></span>
+        </div>
+        <div class="row">
+          <span>Conexión: <strong id="overlay-connection">—</strong></span>
+          <span>Enviadas: <strong id="overlay-sent">0</strong></span>
+          <span>Buffer: <strong id="overlay-buffered">0</strong></span>
+        </div>
+        <div class="row">
+          <span>Cámara: <strong id="overlay-camera">—</strong></span>
+        </div>
+      </div>
+
+      <div class="overlay-panel">
+        <div class="row">
+          <span>odom p: <strong class="value" id="overlay-raw-p">—</strong></span>
+        </div>
+        <div class="row">
+          <span>world p: <strong class="value" id="overlay-world-p">—</strong></span>
+        </div>
+        <div class="row">
+          <button class="button small" id="overlay-stop" type="button" disabled>Detener AR</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/ar.ts"></script>
+  </body>
+</html>

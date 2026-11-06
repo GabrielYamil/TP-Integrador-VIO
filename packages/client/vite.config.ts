@@ -54,6 +54,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: 'index.html',
+        ar: 'ar.html',
         arTest: 'ar-test.html',
         mock: 'mock.html',
       },

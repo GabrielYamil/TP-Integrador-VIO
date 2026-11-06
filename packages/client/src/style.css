@@ -413,6 +413,19 @@ footer {
   background: #000;
 }
 
+/* Antes de iniciar la sesión la página es normal y puede desplazarse. */
+body.ar-body:not(.session-active) {
+  overflow: auto;
+  background:
+    radial-gradient(circle at 15% -10%, rgba(110, 168, 255, 0.22), transparent 38rem),
+    radial-gradient(circle at 90% 10%, rgba(76, 224, 201, 0.12), transparent 30rem), var(--bg);
+}
+
+body.ar-body.session-active {
+  overflow: hidden;
+  background: #000;
+}
+
 .ar-body .page {
   width: min(880px, calc(100% - 1.5rem));
   padding-top: 1.25rem;
@@ -490,7 +503,13 @@ footer {
 .overlay .row {
   display: flex;
   flex-wrap: wrap;
+  align-items: baseline;
   gap: 0.35rem 0.9rem;
+}
+
+.overlay .value {
+  font-family: var(--mono);
+  font-size: 0.76rem;
 }
 
 .overlay .ok {

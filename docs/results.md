@@ -3,8 +3,8 @@
 Última actualización: **2026-11-06**.
 
 Alcance de este informe: **Fase 0 (entorno, HTTPS y prueba AR)**, **Fase 1
-(matemática SE(3) y convenciones)** y **Fase 2 (relay y Foxglove)**. Las fases 3
-a 10 todavía no se implementaron.
+(matemática SE(3) y convenciones)**, **Fase 2 (relay y Foxglove)** y **Fase 3
+(cliente WebXR y pose cruda)**. Las fases 4 a 10 todavía no se implementaron.
 
 ## 1. Resumen
 
@@ -13,6 +13,7 @@ a 10 todavía no se implementaron.
 | 0 — entorno y HTTPS           | **Parcial**    | El circuito PC está verificado. La aceptación depende de la prueba en celular real, que sigue pendiente.                 |
 | 1 — matemática y convenciones | **Completada** | 33 tests automáticos pasan, incluido el caso sintético de corrección.                                                    |
 | 2 — relay y Foxglove          | **Completada** | 13 tests del servidor. Foxglove Studio 3.5.0 el 2026-11-05 y relay HTTPS el 2026-11-06. Falta la telemetría del celular. |
+| 3 — cliente AR y pose cruda   | **Implementada** | 7 tests del cliente. Falta validar en celular la fluidez, el tracking y la orientación de los ejes.                      |
 
 La Fase 0 no se declara cerrada hasta que Chrome Android acepte el certificado
 e inicie una sesión `immersive-ar` con tracking. En esta máquina no hay un
@@ -25,6 +26,13 @@ Su criterio de aceptación se cumplió: Foxglove Studio mostró el marco `world`
 los seis marcadores del mapa y la cámara moviéndose con la trayectoria
 sintética. La validación móvil pendiente no invalida el relay, pero sí impide
 considerar cerrada la Fase 0.
+
+La Fase 3 también se implementó a pedido explícito. El cliente `/ar.html` abre
+una sesión `immersive-ar`, convierte la pose de WebXR a `odom` y la envía a
+~30 Hz por el relay. El transporte tiene reconexión con backoff, buffer acotado
+y descarte de mensajes viejos. La validación en celular no se pudo ejecutar:
+no hay un dispositivo ARCore disponible, así que el criterio de aceptación de
+la fase sigue **pendiente**.
 
 ## 2. Verificaciones automáticas
 
