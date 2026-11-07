@@ -200,6 +200,9 @@ const matrix32 = poseToWebXRMatrix(pose);
 - Cuaterniones: `[x, y, z, w]`.
 - Tiempo: milisegundos. El celular usa `performance.now()` o el `time` del frame
   XR; el servidor agrega su timestamp de recepción en `receivedAtMs`.
+- En la Fase 3, `/ar.html` envía `t = performance.timeOrigin + XRFrame.time`,
+  es decir, milisegundos de época del reloj del celular. El `XRFrame.time` usa
+  la misma base que `performance.now()`.
 - Foxglove usa nanosegundos: la conversión se hace una sola vez en
   `packages/server/src/time.ts`.
 
@@ -221,7 +224,9 @@ descartar mensajes inválidos y registrarel motivo.
 ```
 
 `tracking` es `tracking`, `limited` o `lost`. `corrected` es opcional hasta que
-haya una corrección de mapa.
+haya una corrección de mapa. El cliente de la Fase 3 envía solo `raw`, en el
+marco `odom`, y omite `corrected`; el servidor deriva la pose corregida con
+`T_WORLD_ODOM_INITIAL` y la publica en `/pose/corrected`.
 
 ### `marker`
 

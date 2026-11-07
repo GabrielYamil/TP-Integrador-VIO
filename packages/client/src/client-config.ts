@@ -14,6 +14,8 @@ export interface ClientConfig {
   uiIntervalMs: number;
   statsWindowMs: number;
   trackingLostFrames: number;
+  /** Evita que la UI quede en "consultando" si el navegador no responde. */
+  supportTimeoutMs: number;
   ingest: {
     maxBufferedMessages: number;
     maxBufferAgeMs: number;
@@ -28,6 +30,7 @@ export const CLIENT_CONFIG: ClientConfig = {
   uiIntervalMs: 250,
   statsWindowMs: 500,
   trackingLostFrames: 30,
+  supportTimeoutMs: 5000,
   ingest: {
     maxBufferedMessages: 120,
     maxBufferAgeMs: 3000,
@@ -42,6 +45,7 @@ export interface RuntimeConfig {
   uiIntervalMs: number;
   statsWindowMs: number;
   trackingLostFrames: number;
+  supportTimeoutMs: number;
   ingestUrl: string;
   warnings: string[];
 }
@@ -83,6 +87,7 @@ export function readRuntimeConfig(search: string = window.location.search): Runt
     uiIntervalMs: CLIENT_CONFIG.uiIntervalMs,
     statsWindowMs: CLIENT_CONFIG.statsWindowMs,
     trackingLostFrames: CLIENT_CONFIG.trackingLostFrames,
+    supportTimeoutMs: CLIENT_CONFIG.supportTimeoutMs,
     ingestUrl,
     warnings,
   };

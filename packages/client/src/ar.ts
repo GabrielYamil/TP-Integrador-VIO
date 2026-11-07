@@ -79,6 +79,24 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(message));
+    }, ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 function log(message: string, level: 'info' | 'ok' | 'warn' | 'error' = 'info'): void {
   const line = document.createElement('div');
   line.className = 'log-line';
@@ -474,21 +492,17 @@ async function startSession(): Promise<void> {
     document.body.classList.remove('session-active');
     startButton.disabled = !(window.isSecureContext && supported === true);
 
-    if (session) {
+    const failedSession = session ?? current;
+    if (failedSession) {
       try {
-        await session.end();
+        await failedSession.end();
       } catch {
-        onSessionEnd();
+        // El evento `end` o el propio fallo ya pueden haber cerrado la sesión.
       }
-    } else if (current) {
-      try {
-        await current.end();
-      } catch {
-        onSessionEnd();
-      }
-    } else {
-      updateUi();
     }
+    // Idempotente: si el evento `end` ya limpió el estado, no hace nada.
+    onSessionEnd();
+    updateUi();
   }
 }
 
@@ -527,7 +541,11 @@ async function init(): Promise<void> {
     log('navigator.xr no existe: este navegador no soporta WebXR', 'error');
   } else {
     try {
-      supported = await xr.isSessionSupported('immersive-ar');
+      supported = await withTimeout(
+        xr.isSessionSupported('immersive-ar'),
+        config.supportTimeoutMs,
+        `isSessionSupported no respondió en ${config.supportTimeoutMs} ms`,
+      );
       log(`Soporte immersive-ar: ${supported ? 'sí' : 'no'}`, supported ? 'ok' : 'error');
     } catch (error) {
       supported = false;

@@ -215,7 +215,7 @@ inválidos con log.
 
 ## 5. Estado actual
 
-Fecha de referencia: **2026-11-06**.
+Fecha de referencia: **2026-11-07**.
 
 - **Fase 0:** implementada en código (monorepo, servidor HTTPS, certificados,
   páginas de diagnóstico, mock y documentación). Los certificados de mkcert se
@@ -230,10 +230,17 @@ Fecha de referencia: **2026-11-06**.
   el simulador `pnpm sim`. Los 13 tests del servidor pasan. La validación visual
   en Foxglove Studio 3.5.0 se completó el 2026-11-05 y el relay por `wss` con
   mkcert se verificó el 2026-11-06. La telemetría real del celular sigue
-  **pendiente** para la Fase 3.
+  **pendiente**.
+- **Fase 3:** implementada en código a pedido explícito del usuario. Incluye
+  `/ar.html`, sesión `immersive-ar` con `local-floor` y fallback a `local`,
+  overlay de tracking/FPS/conexión, envío de pose cruda en `odom` a 30 Hz y el
+  cliente WebSocket con reconexión, buffer de 120 mensajes y descarte a los 3 s.
+  Los 7 tests del cliente pasan (53 en total). El relay aceptó un `pose` crudo
+  sin `hello` el 2026-11-07. La validación en celular de fluidez, tracking y ejes
+  sigue **pendiente**, así que la fase no está aceptada.
 - No hay datos de corridas reales, layout de Foxglove ni mapa medido en una
-  sala real. La validación móvil de la Fase 0 se retoma cuando haya un celular
-  ARCore disponible.
+  sala real. La validación móvil de las fases 0 y 3 se retoma cuando haya un
+  celular ARCore disponible.
 
 Las verificaciones pendientes están enumeradas en `docs/results.md` y en el
 checklist de `docs/setup.md`. El agente no debe inventar resultados de pruebas

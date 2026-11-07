@@ -182,13 +182,13 @@ simulada en la convención de WebXR. No valida ARCore ni `camera-access`.
 
 ## Páginas
 
-| Ruta            | Descripción                                                         |
-| --------------- | ------------------------------------------------------------------- |
-| `/`             | Estado del entorno, enlaces y verificación del servidor.            |
-| `/ar.html`      | Cliente de la Fase 3: sesión AR, overlay y pose cruda al relay.     |
-| `/ar-test.html` | Prueba de `immersive-ar`, reference spaces y `camera-access`.       |
-| `/mock.html`    | Webcam y simulación de pose para escritorio.                        |
-| `/health`       | Estado del servidor, la ingesta y Foxglove en JSON.                 |
+| Ruta            | Descripción                                                     |
+| --------------- | --------------------------------------------------------------- |
+| `/`             | Estado del entorno, enlaces y verificación del servidor.        |
+| `/ar.html`      | Cliente de la Fase 3: sesión AR, overlay y pose cruda al relay. |
+| `/ar-test.html` | Prueba de `immersive-ar`, reference spaces y `camera-access`.   |
+| `/mock.html`    | Webcam y simulación de pose para escritorio.                    |
+| `/health`       | Estado del servidor, la ingesta y Foxglove en JSON.             |
 
 ## Comandos
 

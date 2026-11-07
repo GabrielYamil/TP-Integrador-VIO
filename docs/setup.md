@@ -1,9 +1,10 @@
 # Puesta en marcha
 
 Esta guía cubre la instalación, los certificados HTTPS, la ejecución local, la
-verificación de la Fase 0 y la prueba del relay y Foxglove de la Fase 2. La
-validación en el celular es obligatoria: el emulador de Android Studio no
-implementa WebXR y no sirve para aceptar la Fase 0.
+verificación de la Fase 0, la prueba del relay y Foxglove de la Fase 2 y el
+cliente AR de la Fase 3. La validación en el celular es obligatoria: el
+emulador de Android Studio no implementa WebXR y no sirve para aceptar la
+Fase 0 ni la Fase 3.
 
 ## 1. Requisitos
 
@@ -208,6 +209,7 @@ muestre Vite: `http://localhost:5173/mock.html` si no hay certificados, o
 | Página         | Ruta            | Uso                                              |
 | -------------- | --------------- | ------------------------------------------------ |
 | Inicio         | `/`             | Estado del entorno y accesos.                    |
+| Cliente AR     | `/ar.html`      | Fase 3: sesión AR y pose cruda al relay.         |
 | Diagnóstico AR | `/ar-test.html` | Prueba real de `immersive-ar` y `camera-access`. |
 | Mock           | `/mock.html`    | Webcam y pose simulada en escritorio.            |
 | Salud          | `/health`       | JSON del servidor, la ingesta y Foxglove.        |
@@ -225,11 +227,14 @@ muestre Vite: `http://localhost:5173/mock.html` si no hay certificados, o
    el dibujo cenital debe responder a `W`, `A`, `S`, `D`, `Q` y `E`.
 5. En `/ar-test.html`, desde la PC, la sesión AR probablemente no esté
    soportada. Eso no invalida la prueba: la sesión se valida en el celular.
+6. En `/ar.html`, desde la PC, la sesión AR también puede no estar soportada,
+   pero el relay debe figurar como **conectado**. Eso confirma que el cliente
+   WebSocket y el proxy `/ingest` funcionan antes de probar en el celular.
 
-## 6. Relay y Foxglove (Fase 2)
+## 6. Relay, Foxglove y cliente AR (Fases 2 y 3)
 
 Esta verificación no necesita el celular: usa el simulador y Foxglove Studio de
-escritorio.
+escritorio. El cliente AR de la Fase 3 se prueba en la sección 7.
 
 1. Dejá el servidor corriendo con `pnpm dev` o, para la versión compilada,
    `pnpm build` seguido de `pnpm start`.
@@ -271,6 +276,34 @@ escritorio.
 | `--insecure`   | desactivado                   | No verifica TLS; solo para pruebas locales. |
 | `--log-level`  | `info`                        | `debug`, `info`, `warn`, `error`, `silent`. |
 
+### Cliente AR (Fase 3)
+
+`/ar.html` es el cliente real de la Fase 3. A diferencia del simulador, usa la
+pose de WebXR/ARCore y no envía `hello` porque todavía no tiene intrínsecos ni
+imagen de cámara.
+
+1. Abrí `/ar.html` por HTTPS. La página comprueba `window.isSecureContext` y
+   `navigator.xr.isSessionSupported('immersive-ar')`.
+2. Esperá a que el pill **Relay** pase a **conectado**. Si no conecta, revisá la
+   URL de `?ingest=` y la consola del servidor.
+3. Presioná **Iniciar AR** y aceptá los permisos de Chrome/ARCore.
+4. En el overlay verificá tracking, FPS, conexión, mensajes enviados y buffer.
+5. En Foxglove Studio, con `ws://IP_DE_LA_PC:8765`, mirá `/pose/raw` en `odom`,
+   `/pose/corrected` en `world` y el árbol `/tf`. La pose corregida usa
+   `T_WORLD_ODOM_INITIAL` hasta que exista detección de marcadores.
+6. Para pruebas controladas, la URL acepta:
+
+   ```text
+   /ar.html?hz=15&ingest=wss://192.168.1.18:8443/ingest
+   ```
+
+   `hz` se limita a 1–60. La URL de `ingest` debe ser `ws://` o `wss://`.
+
+El overlay muestra **0 marcadores** porque la detección AprilTag empieza en la
+Fase 5; el contador se conectará al detector en esa fase. El criterio de
+aceptación de la Fase 3 se verifica caminando con el celular y comprobando la
+fluidez y la orientación de los ejes en Foxglove (sección 7).
+
 El servidor Foxglove usa `ws://` sin TLS porque queda en la red local. La
 telemetría del celular sí viaja por `wss://` al puerto 8443.
 
@@ -279,10 +312,11 @@ Si Foxglove no muestra los tópicos, revisá en `/health` el campo
 relay, ejecutá el simulador con `--log-level debug` y mirá los mensajes
 `[server:ingest]`.
 
-## 7. Verificación manual en el celular
+## 7. Verificación manual en el celular (Fases 0 y 3)
 
-Esta es la parte que cierra el criterio de aceptación de la Fase 0. Anotá el
-resultado en `docs/results.md` o adjuntá el reporte copiado desde la página.
+Esta es la parte que cierra los criterios de aceptación de la Fase 0 y de la
+Fase 3. Anotá el resultado en `docs/results.md` o adjuntá el reporte copiado
+desde la página.
 
 1. Confirmá que el celular y la PC están en la misma red y que la PC responde
    en `ping IP_DE_LA_PC`.
@@ -290,23 +324,38 @@ resultado en `docs/results.md` o adjuntá el reporte copiado desde la página.
 3. Verificá que el candado sea válido y que **no** aparezca
    `ERR_CERT_AUTHORITY_INVALID` ni una pantalla de "La conexión no es privada".
 4. En la página de inicio, comprobá que el estado del servidor sea OK.
-5. Entrá a **Probar AR en el celular** (`/ar-test.html`).
-6. Presioná **Iniciar sesión AR** y aceptá los permisos que pida Chrome o
-   ARCore.
+5. Entrá a **Abrir cliente AR** (`/ar.html`) y esperá que el pill **Relay**
+   indique **conectado**.
+6. Presioná **Iniciar AR** y aceptá los permisos que pida Chrome o ARCore.
 7. Confirmá en el overlay:
    - tracking distinto de `lost` mientras el celular está quieto;
-   - FPS estable;
-   - `camera-access` en `enabled` (o `unavailable` con un mensaje claro).
-8. Movete unos metros y volvé. La pose de WebXR debe seguir al movimiento. En
-   esta fase todavía no hay corrección por marcadores ni envío a Foxglove.
-9. Copiá el reporte con **Copiar reporte** y guardalo como evidencia.
+   - FPS estable y cercano a la tasa de frames del dispositivo;
+   - conexión en **conectado**, mensajes enviados crecientes y buffer en 0;
+   - el contador de marcadores queda en 0: la detección llega en la Fase 5.
+8. Abrí Foxglove Studio en `ws://IP_DE_LA_PC:8765` y suscribite a `/pose/raw`,
+   `/pose/corrected`, `/tf`, `/markers` y `/metrics`.
+9. Caminá unos metros, girate y agachate/saltá. En Foxglove:
+   - el marco de la cámara debe moverse de forma fluida y consistente;
+   - avanzar hacia adelante debe mover el marco en la dirección esperada de
+     `world` (el eje `+x` al inicio);
+   - los giros y el movimiento vertical deben corresponder al movimiento real;
+   - `/pose/raw` debe estar en `odom` y `/pose/corrected` en `world`.
+10. Entrá a **Diagnóstico WebXR** (`/ar-test.html`) para comprobar
+    `camera-access`, reference spaces y la textura de cámara. Copiá el reporte
+    como evidencia.
 
 ### Qué significa cada resultado
 
-- **Sesión AR inicia y tracking OK:** se cumple el criterio de Fase 0.
-- **Sesión AR inicia pero `camera-access` no está disponible:** la Fase 3 puede
-  continuar con solo VIO, pero la Fase 4 queda bloqueada. Anotarlo como riesgo.
-- **No inicia:** revisar la sección 8 y no avanzar a la Fase 3 hasta resolverlo.
+- **Sesión AR inicia y tracking OK:** se cumple el criterio de la Fase 0.
+- **La pose de `/ar.html` llega y se mueve con fluidez, con ejes correctos:** se
+  cumple el criterio de la Fase 3.
+- **La pose llega pero los ejes no coinciden:** no aceptar la Fase 3; revisar
+  `docs/conventions.md`, la conversión `poseFromWebXRMatrix` y la orientación
+  inicial `T_WORLD_ODOM_INITIAL` antes de avanzar.
+- **`camera-access` no está disponible:** la Fase 3 no se ve afectada porque
+  solo usa la pose, pero la Fase 4 queda bloqueada. Anotarlo como riesgo.
+- **No inicia o no hay pose:** revisar la sección 8 y no avanzar a la Fase 4
+  hasta resolverlo.
 - **Certificado inválido:** no seguir; WebXR no funciona de forma confiable sin
   un contexto seguro válido.
 
@@ -396,6 +445,18 @@ https://localhost:5173/
 El certificado incluye `localhost`. Esto evita depender de la red WiFi, aunque
 el tráfico sigue pasando por el cable USB.
 
+### El cliente AR no conecta al relay
+
+- Verificá que el servidor esté corriendo y que `/health` responda.
+- Revisá el pill **Relay** en `/ar.html`: `reconectando…` indica que el
+  WebSocket se cerró; el cliente reintenta con backoff automáticamente.
+- Si usaste `?ingest=`, comprobá que sea una URL `ws://` o `wss://` y que el
+  puerto sea el correcto.
+- Con Vite, el proxy `/ingest` reenvía a `https://127.0.0.1:8443`; el servidor
+  Node tiene que estar levantado.
+- En el celular, el certificado tiene que ser válido también para el WebSocket
+  seguro. Si la página abre con advertencia, `wss://` no funcionará.
+
 ### Ver la consola del celular
 
 1. Conectá el celular por USB y habilitá la depuración USB.
@@ -436,3 +497,21 @@ relay con HTTPS real y mkcert se verificó el **2026-11-06** con el simulador.
 Queda pendiente la telemetría del celular y repetir el relay por la IP LAN. La
 validación móvil de la Fase 0 sigue pendiente y se retoma cuando haya un celular
 ARCore disponible.
+
+### Checklist de Fase 3
+
+- [x] `/ar.html` compila en el build multipágina y se sirve por HTTPS.
+- [x] `pnpm test` pasa los 7 tests del cliente (53 en total).
+- [x] El relay acepta un mensaje `pose` crudo sin `hello` (1 válido, 0 inválidos).
+- [x] El cliente reconecta, bufferiza y descarta mensajes viejos (tests).
+- [ ] `/ar.html` inicia una sesión `immersive-ar` en el celular.
+- [ ] El overlay muestra tracking, FPS, conexión y mensajes enviados.
+- [ ] La pose cruda llega a `/health` y a Foxglove (`/pose/raw`, `/tf`).
+- [ ] La pose se mueve con fluidez y a una frecuencia cercana a 30 Hz.
+- [ ] Avanzar, girar y cambiar de altura producen el movimiento esperado en
+      `world`.
+- [ ] La prueba se registra en `docs/results.md`.
+
+La Fase 3 está implementada en código y cubierta por tests de transporte, pero
+el criterio de aceptación depende de la prueba en el celular. No se declara
+cerrada hasta completar los ítems pendientes.

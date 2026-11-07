@@ -1,6 +1,6 @@
 # Resultados y estado de validación
 
-Última actualización: **2026-11-06**.
+Última actualización: **2026-11-07**.
 
 Alcance de este informe: **Fase 0 (entorno, HTTPS y prueba AR)**, **Fase 1
 (matemática SE(3) y convenciones)**, **Fase 2 (relay y Foxglove)** y **Fase 3
@@ -8,11 +8,11 @@ Alcance de este informe: **Fase 0 (entorno, HTTPS y prueba AR)**, **Fase 1
 
 ## 1. Resumen
 
-| Fase                          | Estado         | Observación                                                                                                              |
-| ----------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| 0 — entorno y HTTPS           | **Parcial**    | El circuito PC está verificado. La aceptación depende de la prueba en celular real, que sigue pendiente.                 |
-| 1 — matemática y convenciones | **Completada** | 33 tests automáticos pasan, incluido el caso sintético de corrección.                                                    |
-| 2 — relay y Foxglove          | **Completada** | 13 tests del servidor. Foxglove Studio 3.5.0 el 2026-11-05 y relay HTTPS el 2026-11-06. Falta la telemetría del celular. |
+| Fase                          | Estado           | Observación                                                                                                              |
+| ----------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| 0 — entorno y HTTPS           | **Parcial**      | El circuito PC está verificado. La aceptación depende de la prueba en celular real, que sigue pendiente.                 |
+| 1 — matemática y convenciones | **Completada**   | 33 tests automáticos pasan, incluido el caso sintético de corrección.                                                    |
+| 2 — relay y Foxglove          | **Completada**   | 13 tests del servidor. Foxglove Studio 3.5.0 el 2026-11-05 y relay HTTPS el 2026-11-06. Falta la telemetría del celular. |
 | 3 — cliente AR y pose cruda   | **Implementada** | 7 tests del cliente. Falta validar en celular la fluidez, el tracking y la orientación de los ejes.                      |
 
 La Fase 0 no se declara cerrada hasta que Chrome Android acepte el certificado
@@ -38,13 +38,13 @@ la fase sigue **pendiente**.
 
 Ejecutadas desde la raíz del repositorio:
 
-| Comando             | Resultado                                                       |
-| ------------------- | --------------------------------------------------------------- |
-| `pnpm typecheck`    | OK en `shared`, `client` y `server`.                            |
-| `pnpm test`         | 7 archivos, **46 tests pasaron** (33 shared + 13 server).       |
-| `pnpm lint`         | OK, sin errores.                                                |
-| `pnpm build`        | OK. El cliente multipágina se generó en `packages/client/dist`. |
-| `pnpm format:check` | OK después de aplicar Prettier.                                 |
+| Comando             | Resultado                                                            |
+| ------------------- | -------------------------------------------------------------------- |
+| `pnpm typecheck`    | OK en `shared`, `client` y `server`.                                 |
+| `pnpm test`         | 8 archivos, **53 tests pasaron** (33 shared + 7 client + 13 server). |
+| `pnpm lint`         | OK, sin errores.                                                     |
+| `pnpm build`        | OK. El cliente multipágina se generó en `packages/client/dist`.      |
+| `pnpm format:check` | OK después de aplicar Prettier.                                      |
 
 ### Detalle de los tests
 
@@ -54,6 +54,7 @@ Ejecutadas desde la raíz del repositorio:
 | `packages/shared/src/conventions/axes.test.ts` |     6 | `C_WEBXR_CV`, `C_ROS_WEBXR`, `C_ROS_CV` y sus inversas.                                     |
 | `packages/shared/src/markers/map.test.ts`      |     9 | Esquema del mapa, IDs duplicados, `markerPoseOnWall` y geometría del mapa demo.             |
 | `packages/shared/src/messages/schemas.test.ts` |     6 | Validación de mensajes `pose`, `marker`, `correction` y `hello`.                            |
+| `packages/client/src/ws-client.test.ts`        |     7 | Envío, buffer, descarte por límite/edad, backoff y cierre del cliente WebSocket.            |
 | `packages/server/src/foxglove.test.ts`         |     4 | Conversión ms→ns, canales JSON Schema, TF, escena, métricas y snapshot al suscribirse.      |
 | `packages/server/src/ingest.test.ts`           |     2 | Mensajes válidos, inválidos y binarios; rechazo de otra ruta WebSocket.                     |
 | `packages/server/src/sim-client.test.ts`       |     7 | Argumentos, trayectorias círculo/cuadrado, deriva y mensaje `hello`.                        |
@@ -69,6 +70,11 @@ el contenido de `/pose/raw`, `/pose/corrected`, `/tf`, `/markers` y `/metrics`.
 Incluye una pose sin `corrected` para comprobar el uso de
 `T_WORLD_ODOM_INITIAL`.
 
+Los tests de `IngestClient` usan un WebSocket falso y timers simulados. Cubren
+el envío directo, el buffer hasta la apertura, el descarte del mensaje más viejo
+al superar el límite, el descarte por antigüedad, el backoff exponencial con
+jitter, el cierre definitivo y el fallo del constructor de WebSocket.
+
 ## 3. Verificación del servidor HTTPS
 
 El **2026-11-06** se instaló `mkcert` 1.4.4 con `winget` y se ejecutó
@@ -77,18 +83,19 @@ El **2026-11-06** se instaló `mkcert` 1.4.4 con `winget` y se ejecutó
 `172.19.144.1`). La CA quedó en `certs/rootCA.pem`, lista para instalar en
 Android. El servidor y Vite se validaron de nuevo con estos certificados.
 
-| Prueba                                               | Resultado                                                |
-| ---------------------------------------------------- | -------------------------------------------------------- |
-| `https://localhost:8443/health`                      | HTTP 200, `status: ok`, `tls: true`.                     |
-| `https://127.0.0.1:8443/health` con verificación TLS | HTTP 200, certificado válido.                            |
-| `/` en `:8443`                                       | HTTP 200.                                                |
-| `/ar-test.html` en `:8443`                           | HTTP 200.                                                |
-| `/mock.html` en `:8443`                              | HTTP 200.                                                |
-| Assets JS/CSS del build                              | HTTP 200.                                                |
-| Vite en `https://localhost:5173/`                    | HTTP 200.                                                |
-| Proxy `/health` de Vite hacia `:8443`                | HTTP 200 con `tls: true`.                                |
-| `pnpm dev` con cliente y servidor                    | Ambos procesos arrancaron y sirvieron las tres páginas.  |
-| Relay `wss://localhost:8443/ingest`                  | 37 mensajes válidos, 0 inválidos; CA de mkcert aceptada. |
+| Prueba                                               | Resultado                                                 |
+| ---------------------------------------------------- | --------------------------------------------------------- |
+| `https://localhost:8443/health`                      | HTTP 200, `status: ok`, `tls: true`.                      |
+| `https://127.0.0.1:8443/health` con verificación TLS | HTTP 200, certificado válido.                             |
+| `/` en `:8443`                                       | HTTP 200.                                                 |
+| `/ar.html` en `:8443`                                | HTTP 200.                                                 |
+| `/ar-test.html` en `:8443`                           | HTTP 200.                                                 |
+| `/mock.html` en `:8443`                              | HTTP 200.                                                 |
+| Assets JS/CSS del build                              | HTTP 200.                                                 |
+| Vite en `https://localhost:5173/`                    | HTTP 200.                                                 |
+| Proxy `/health` de Vite hacia `:8443`                | HTTP 200 con `tls: true`.                                 |
+| `pnpm dev` con cliente y servidor                    | Ambos procesos arrancaron y sirvieron las cuatro páginas. |
+| Relay `wss://localhost:8443/ingest`                  | 37 mensajes válidos, 0 inválidos; CA de mkcert aceptada.  |
 
 ### Lo que falta verificar
 
@@ -172,7 +179,72 @@ se verificó el relay con el servidor HTTPS real: el simulador usó
 `wss://localhost:8443/ingest` y la CA de mkcert sin `--insecure`. Queda pendiente
 la telemetría del celular y el layout exportado, que corresponde a la Fase 7.
 
-## 5. Herramientas y artefactos
+## 5. Verificación de la Fase 3
+
+### 5.1. Alcance implementado
+
+- `packages/client/ar.html` y `packages/client/src/ar.ts`: pantalla de inicio,
+  comprobación de HTTPS y `immersive-ar`, sesión con `dom-overlay`,
+  `local-floor` con fallback a `local` y `camera-access` como feature opcional.
+- Conversión de cada `XRViewerPose` a `odom` con `poseFromWebXRMatrix` y envío de
+  mensajes `pose` a `poseHz` (30 Hz por defecto). El mensaje no incluye
+  `corrected`; el servidor usa `T_WORLD_ODOM_INITIAL`.
+- Overlay con tracking, FPS, estado del relay, mensajes enviados, buffer,
+  `camera-access` y posición cruda/corregida para diagnóstico.
+- `packages/client/src/ws-client.ts`: reconexión con backoff exponencial y
+  jitter, buffer máximo de 120 mensajes, edad máxima de 3 s y descarte de los
+  mensajes más viejos.
+- `packages/client/src/client-config.ts`: overrides `?hz=1..60` y
+  `?ingest=ws://...|wss://...` para pruebas. La comprobación de soporte tiene un
+  timeout de 5 s para que la UI no quede en **consultando** si
+  `isSessionSupported` no responde.
+
+### 5.2. Prueba de integración del payload
+
+El **2026-11-07** se levantó el servidor con `pnpm start` y se conectó un
+WebSocket de Node a `wss://localhost:8443/ingest` usando `certs/rootCA.pem` como
+CA. Se envió un mensaje idéntico al del cliente, sin `hello`:
+
+```json
+{
+  "type": "pose",
+  "t": 1794000000000,
+  "raw": { "p": [0, 1.4, 0], "q": [0, 0, 0, 1] },
+  "tracking": "tracking"
+}
+```
+
+`/health` registró 1 mensaje recibido, 1 válido, 0 inválidos, 0 `hello` y 1
+`pose`. Esto confirma que el relay acepta el mensaje de la Fase 3 y que el
+cliente no necesita `hello` para enviar poses. **No** valida WebXR ni el
+movimiento real: eso requiere el celular.
+
+También el **2026-11-07** se cargó `/ar.html` en Chrome headless contra el
+servidor compilado. La página mostró `HTTPS: sí`, `Relay: conectado` y, tras el
+timeout de 5 s, `immersive-ar: no soportado`; no hubo errores JavaScript. Esto
+verifica el arranque de la página y el WebSocket, no el soporte real de WebXR
+(el flag `--ignore-certificate-errors` se usó solo para el smoke test local).
+
+### 5.3. Cobertura automática de la Fase 3
+
+`ws-client.test.ts` prueba con un WebSocket falso y timers simulados:
+
+- envío directo cuando el socket está abierto;
+- buffer y vaciado en orden al abrir;
+- descarte del mensaje más viejo al superar el límite;
+- descarte por antigüedad al reconectar;
+- backoff exponencial con jitter y reinicio del intento al abrir;
+- cierre definitivo sin reconexión;
+- reconexión cuando el constructor de WebSocket falla.
+
+### 5.4. Criterio de aceptación
+
+El criterio de la Fase 3 —caminar con el celular y ver la pose moverse de forma
+fluida en Foxglove, con los ejes correctos— **no se puede verificar sin un
+dispositivo ARCore**. Queda pendiente y no se declara cumplido. Las pruebas
+automáticas y de relay solo cubren el transporte y el formato del mensaje.
+
+## 6. Herramientas y artefactos
 
 ### Marcadores
 
@@ -204,9 +276,9 @@ El servidor actual:
 - publica `/tf`, `/pose/raw`, `/pose/corrected`, `/markers` y `/metrics` en
   `ws://IP_DE_LA_PC:8765`;
 - acepta `--http` para pruebas de escritorio;
-- incluye `pnpm sim` como cliente de prueba.
+- incluye `pnpm sim` y el cliente móvil `/ar.html` como fuentes de telemetría.
 
-## 6. Verificaciones manuales pendientes
+## 7. Verificaciones manuales pendientes
 
 Las siguientes pruebas no se pueden hacer sin el celular. Quedan registradas
 como pendientes, no como aprobadas. La validación de Foxglove Studio ya se
@@ -221,14 +293,18 @@ registró en la sección 4.3.
 - [ ] `https://IP_DE_LA_PC:5173/` abre en Chrome Android sin advertencias.
 - [ ] La página de inicio detecta contexto seguro y servidor disponible.
 - [ ] `/ar-test.html` inicia una sesión `immersive-ar` en el celular.
+- [ ] `/ar.html` inicia la sesión y muestra tracking, FPS y estado del relay en
+      el overlay.
 - [ ] La sesión entrega tracking y FPS estables.
+- [ ] La pose cruda del celular llega por `wss://` al relay y aparece en
+      `/health`, `/pose/raw` y `/tf` (`odom → camera`).
+- [ ] Caminar hacia adelante mueve el marco en la dirección esperada de `world`;
+      los giros y el movimiento vertical son coherentes.
+- [ ] La pose se ve fluida en Foxglove a una frecuencia cercana a 30 Hz.
 - [ ] `camera-access` se habilita y `getCameraImage` devuelve una textura.
 - [ ] El modo mock abre la webcam en la PC y la pose simulada responde al
       teclado.
-- [ ] La orientación de los ejes de WebXR coincide con el movimiento real
-      (adelante, giros y vertical).
 - [ ] Se guardó el reporte JSON de `/ar-test.html` como evidencia.
-- [ ] La telemetría real del celular llega por `wss://` al relay.
 
 ### Cómo registrar el resultado
 
@@ -242,13 +318,17 @@ nueva de este documento, indicando:
 - resultado de `enabledFeatures`;
 - errores observados.
 
+Para la Fase 3, registrar además el estado del overlay de `/ar.html`, el valor
+de `ingest.messagesValid` en `/health` y una captura de Foxglove con
+`/pose/raw`, `/tf` y la trayectoria cruda.
+
 La prueba de Foxglove del 2026-11-05 quedó registrada en la sección 4.3 con la
 versión 3.5.0 y la URL de conexión. Para futuras corridas, agregar una captura
 del panel 3D con las dos trayectorias.
 
 No modificar los resultados automáticos sin volver a ejecutar los comandos.
 
-## 7. Limitaciones conocidas
+## 8. Limitaciones conocidas
 
 1. **Validación móvil bloqueada:** no hay un celular ARCore conectado en el
    entorno de desarrollo actual.
@@ -258,24 +338,29 @@ No modificar los resultados automáticos sin volver a ejecutar los comandos.
 3. **Emulador:** el emulador de Android Studio no implementa WebXR.
 4. **Mapa sintético:** las poses de los marcadores no provienen de una sala
    real y no se comprobó la orientación física.
-5. **Foxglove Studio:** validado en escritorio con la versión 3.5.0; falta la
+5. **Fase 3:** el cliente y el transporte están implementados y testeados, pero
+   la fluidez, el tracking y la orientación de los ejes no se validaron en un
+   celular real. El criterio de aceptación sigue pendiente.
+6. **Foxglove Studio:** validado en escritorio con la versión 3.5.0; falta la
    telemetría real del celular y una captura de evidencia.
-6. **Relay HTTPS:** validado con `wss://localhost:8443/ingest` y la CA de mkcert.
+7. **Relay HTTPS:** validado con `wss://localhost:8443/ingest` y la CA de mkcert.
    Falta repetirlo desde el celular por la IP LAN.
-7. **mkcert:** instalado y con certificados generados; la CA todavía no está
+8. **mkcert:** instalado y con certificados generados; la CA todavía no está
    instalada en Android y las reglas de firewall requieren una consola elevada.
-8. **`@foxglove/ws-protocol` 0.8.0:** está deprecado; se usa igual por la
+9. **`@foxglove/ws-protocol` 0.8.0:** está deprecado; se usa igual por la
    decisión del proyecto y se revisará si aparece un problema de compatibilidad.
 
-## 8. Próximo paso
+## 9. Próximo paso
 
 1. Instalar `certs/rootCA.pem` en el celular y crear las reglas de firewall en
    una consola elevada.
 2. Completar el checklist de la Fase 0 cuando haya un celular ARCore.
-3. Avanzar a la Fase 3 (pose cruda en vivo desde el cliente) una vez cerrada la
-   Fase 0.
+3. Validar `/ar.html` en el celular: sesión, tracking, pose en Foxglove, ejes y
+   fluidez. Con eso se cierra la Fase 3.
 4. Repetir el relay por la IP LAN durante la integración del celular.
+5. Iniciar la Fase 4 (imagen de cámara e intrínsecos) recién cuando la Fase 3
+   esté aceptada.
 
-La Fase 2 está cerrada, incluido el relay HTTPS con mkcert, y no bloquea la
-Fase 3 desde el punto de vista del código. El proyecto mantiene la regla de
-cerrar una fase antes de iniciar la siguiente.
+La Fase 2 está cerrada y la Fase 3 está implementada, pero no aceptada hasta
+probarla en un dispositivo real. El proyecto mantiene la regla de cerrar una
+fase antes de iniciar la siguiente.
