@@ -80,10 +80,11 @@ vio-marker-fusion/
 │   ├── marker-map.md         # sala demo, impresión y medición real
 │   └── results.md            # estado de validación y resultados
 ├── config/
-│   └── marker_map.json       # mapa de marcadores (pose conocida)
+│   ├── marker_map.json       # mapa de marcadores (pose conocida)
+│   └── camera_intrinsics.example.json  # calibración opcional (ejemplo)
 ├── packages/
-│   ├── shared/               # SE(3), convenciones, esquemas, mapa
-│   ├── client/               # Vite, WebXR, mock de escritorio
+│   ├── shared/               # SE(3), convenciones, esquemas, mapa y cámara
+│   ├── client/               # Vite, WebXR, cámara, mock de escritorio
 │   └── server/               # HTTPS y, desde Fase 2, relay y Foxglove
 ├── tools/
 │   ├── generate_markers.py   # PNG y PDF A4 de AprilTags
@@ -96,8 +97,8 @@ vio-marker-fusion/
 ```
 
 Directorios y artefactos generados que no se versionan: `certs/*.pem`,
-`markers/*.png`, `markers/*.pdf`, `data/runs/*.jsonl`, `data/runs/*.mcap` y
-todos los `dist/`.
+`markers/*.png`, `markers/*.pdf`, `data/runs/*.jsonl`, `data/runs/*.mcap`,
+`config/camera_intrinsics.json` y todos los `dist/`.
 
 ## 4. Convenciones obligatorias
 
@@ -213,6 +214,23 @@ inválidos con log.
 | `/markers`        | `foxglove.SceneUpdate`     | marcadores y trayectoria                         |
 | `/metrics`        | JSON propio                | corrección, marcadores visibles, FPS, latencia   |
 
+### 4.7. Imagen de cámara e intrínsecos (Fase 4)
+
+- La imagen se obtiene con `XRWebGLBinding.getCameraImage(view.camera)` cuando
+  `camera-access` está habilitado. La textura tiene origen abajo a la izquierda.
+- El cliente reduce la textura en GPU a un framebuffer propio (lado mayor
+  `maxDimension`, 640 px por defecto), invierte `v` para que la fila 0 sea el
+  borde superior y hace `readPixels` RGBA. El buffer gris resultante es
+  row-major con origen arriba a la izquierda, apto para OpenCV.
+- Los intrínsecos se derivan de `XRView.projectionMatrix` con el tamaño de la
+  imagen de cámara como viewport y se escalan a la resolución procesada. El
+  centro principal se refleja para quedar en origen top-left (OpenCV).
+- La calibración opcional vive en `config/camera_intrinsics.json` (no
+  versionado; ejemplo en `config/camera_intrinsics.example.json`). Se define
+  para `image_size` y se escala a la imagen procesada sin reflejar `cy`.
+- `hello` se envía al abrir la conexión y después de cada reconexión, con
+  `image_size` e `intrinsics` correspondientes a la imagen procesada.
+
 ## 5. Estado actual
 
 Fecha de referencia: **2026-11-07**.
@@ -222,24 +240,38 @@ Fecha de referencia: **2026-11-07**.
   generaron el 2026-11-06 y el HTTPS local está verificado. La validación en
   celular real está **pendiente**: falta instalar la CA en Android, crear las
   reglas de firewall y obtener un reporte de `immersive-ar` y `camera-access`.
-- **Fase 1:** completada. 33 tests en 4 archivos; incluye el caso sintético de
-  corrección con deriva y error menor a `1e-6`.
+- **Fase 1:** completada. El paquete `shared` acumula 44 tests en 6 archivos e
+  incluye el caso sintético de corrección con deriva y error menor a `1e-6`.
 - **Fase 2:** implementada en código a pedido del usuario, sin esperar el cierre
   de la Fase 0. Incluye el relay `/ingest`, la validación zod, el servidor
   Foxglove en `:8765`, los canales `/tf`, `/pose/*`, `/markers` y `/metrics`, y
-  el simulador `pnpm sim`. Los 13 tests del servidor pasan. La validación visual
-  en Foxglove Studio 3.5.0 se completó el 2026-11-05 y el relay por `wss` con
-  mkcert se verificó el 2026-11-06. La telemetría real del celular sigue
-  **pendiente**.
+  el simulador `pnpm sim`. Los 13 tests originales del servidor pasan; hoy el
+  paquete acumula 16. La validación visual en Foxglove Studio 3.5.0 se completó
+  el 2026-11-05 y el relay por `wss` con mkcert se verificó el 2026-11-06. La
+  telemetría real del celular sigue **pendiente**.
 - **Fase 3:** implementada en código a pedido explícito del usuario. Incluye
   `/ar.html`, sesión `immersive-ar` con `local-floor` y fallback a `local`,
   overlay de tracking/FPS/conexión, envío de pose cruda en `odom` a 30 Hz y el
   cliente WebSocket con reconexión, buffer de 120 mensajes y descarte a los 3 s.
-  Los 7 tests del cliente pasan (53 en total). El relay aceptó un `pose` crudo
-  sin `hello` el 2026-11-07. La validación en celular de fluidez, tracking y ejes
-  sigue **pendiente**, así que la fase no está aceptada.
+  Los 7 tests originales del cliente pasan; hoy el paquete acumula 25. El relay
+  aceptó un `pose` crudo sin `hello` el 2026-11-07. La validación en celular de
+  fluidez, tracking y ejes sigue **pendiente**, así que la fase no está aceptada.
+- **Fase 4:** implementada en código a pedido explícito del usuario, sin esperar
+  la aceptación de la Fase 3. Incluye:
+  - captura de `XRWebGLBinding.getCameraImage` a `cameraHz` (10 Hz por defecto);
+  - reducción en GPU a un framebuffer con lado mayor `maxDimension` (640 px por
+    defecto), conversión a gris con origen top-left y vista previa en el overlay;
+  - intrínsecos derivados de `XRView.projectionMatrix` o, si existe, cargados
+    de `config/camera_intrinsics.json` y escalados a la imagen procesada;
+  - endpoint `/config/camera_intrinsics.json` en el servidor (404 si falta,
+    503 si es inválido) y proxy de Vite;
+  - mensaje `hello` con `image_size` e `intrinsics`, reenviado al reconectar.
+    El 2026-11-07 se verificó en la PC el endpoint (404 sin archivo, 200 con el
+    ejemplo) y los 85 tests pasan. La captura real, la orientación de la imagen y
+    la estabilidad de los intrínsecos **no se validaron en celular**, así que la
+    fase no está aceptada.
 - No hay datos de corridas reales, layout de Foxglove ni mapa medido en una
-  sala real. La validación móvil de las fases 0 y 3 se retoma cuando haya un
+  sala real. La validación móvil de las fases 0, 3 y 4 se retoma cuando haya un
   celular ARCore disponible.
 
 Las verificaciones pendientes están enumeradas en `docs/results.md` y en el
@@ -296,6 +328,7 @@ muestra al arrancar.
 | El celular no soporta `camera-access` | Bloquea la imagen para detección (Fase 4) | Probar otro dispositivo; VIO solo como degradación; consultar a la cátedra |
 | El emulador no implementa WebXR       | No sirve para validar la app              | Usar celular real por `adb` o WiFi                                         |
 | Intrínsecos derivados imprecisos      | Error de PnP                              | Calibración propia con tablero y archivo de configuración                  |
+| Imagen de cámara rotada o recortada   | Vista previa o intrínsecos incorrectos    | Verificar orientación y aspecto en celular; ajustar o calibrar             |
 | Red universitaria aísla clientes      | El celular no llega a la PC               | Hotspot propio o `adb reverse`                                             |
 | Certificado no confiado               | WebXR no inicia                           | Reinstalar `rootCA.pem`, revisar IP/SAN y perfil de red                    |
 | Detector WASM lento                   | Baja FPS                                  | Reducir resolución/frecuencia y detectar solo cuando convenga              |

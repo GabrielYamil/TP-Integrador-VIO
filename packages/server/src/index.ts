@@ -17,6 +17,7 @@ import { networkInterfaces } from 'node:os';
 import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
+import { loadOptionalCameraCalibration } from './camera-calibration-loader';
 import { getArgument, hasFlag, parseIntegerOption } from './cli';
 import { FoxgloveGateway } from './foxglove';
 import { IngestServer } from './ingest';
@@ -36,6 +37,7 @@ const clientDist = fileURLToPath(new URL('../../client/dist', import.meta.url));
 const certsDir = fileURLToPath(new URL('../../../certs/', import.meta.url));
 const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
 const defaultMarkerMapPath = join(repoRoot, 'config', 'marker_map.json');
+const defaultCameraCalibrationPath = join(repoRoot, 'config', 'camera_intrinsics.json');
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
@@ -59,6 +61,10 @@ async function main(): Promise<void> {
     getArgument(argv, '--foxglove-host') ?? process.env.FOXGLOVE_HOST ?? '0.0.0.0';
   const markerMapPath =
     getArgument(argv, '--map') ?? process.env.MARKER_MAP_PATH ?? defaultMarkerMapPath;
+  const cameraCalibrationPath =
+    getArgument(argv, '--camera-intrinsics') ??
+    process.env.CAMERA_INTRINSICS_PATH ??
+    defaultCameraCalibrationPath;
   const logLevel = parseLogLevel(getArgument(argv, '--log-level') ?? process.env.LOG_LEVEL, 'info');
   const logger = createLogger('server', logLevel);
 
@@ -71,6 +77,21 @@ async function main(): Promise<void> {
     `Mapa: ${markerMap.markers.length} marcadores ${markerMap.dictionary} ` +
       `desde ${markerMapPath}`,
   );
+
+  const cameraCalibration = loadOptionalCameraCalibration(cameraCalibrationPath);
+  if (cameraCalibration.calibration) {
+    logger.info(
+      `Calibración de cámara: ${cameraCalibration.calibration.image_size[0]}×` +
+        `${cameraCalibration.calibration.image_size[1]} desde ${cameraCalibrationPath}`,
+    );
+  } else if (cameraCalibration.error) {
+    logger.warn(cameraCalibration.error);
+  } else {
+    logger.info(
+      `Sin calibración de cámara en ${cameraCalibrationPath}; ` +
+        'el cliente derivará los intrínsecos del XRView.',
+    );
+  }
 
   const gateway = new FoxgloveGateway({
     markerMap,
@@ -98,9 +119,30 @@ async function main(): Promise<void> {
         dictionary: markerMap.dictionary,
         markers: markerMap.markers.length,
       },
+      camera_intrinsics: {
+        available: cameraCalibration.calibration !== null,
+        error: cameraCalibration.error,
+      },
       ingest: ingest?.getStats() ?? null,
       foxglove: gateway.getStats(),
     });
+  });
+
+  app.get('/config/camera_intrinsics.json', (_request, response) => {
+    response.setHeader('Cache-Control', 'no-store');
+    response.setHeader('Access-Control-Allow-Origin', '*');
+    if (cameraCalibration.calibration) {
+      response.json(cameraCalibration.calibration);
+      return;
+    }
+    if (cameraCalibration.error) {
+      response.status(503).json({
+        error: 'camera_intrinsics_invalid',
+        details: cameraCalibration.error,
+      });
+      return;
+    }
+    response.status(404).json({ error: 'camera_intrinsics_not_found' });
   });
 
   if (existsSync(clientDist)) {

@@ -524,6 +524,21 @@ body.ar-body.session-active {
   color: #fecdd3;
 }
 
+.camera-preview {
+  display: block;
+  width: min(52vw, 220px);
+  height: auto;
+  margin-top: 0.55rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 8px;
+  background: #000;
+  image-rendering: pixelated;
+}
+
+.camera-preview[hidden] {
+  display: none;
+}
+
 .reticle {
   position: fixed;
   left: 50%;

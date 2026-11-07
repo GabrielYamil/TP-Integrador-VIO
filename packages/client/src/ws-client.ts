@@ -29,6 +29,8 @@ export interface IngestStats {
   sent: number;
   dropped: number;
   reconnects: number;
+  /** Se incrementa en cada apertura; permite reenviar `hello` tras reconectar. */
+  connectionId: number;
   lastError: string | null;
   lastSentAtMs: number | null;
 }
@@ -75,6 +77,7 @@ export class IngestClient {
   #sent = 0;
   #dropped = 0;
   #reconnects = 0;
+  #connectionId = 0;
   #lastError: string | null = null;
   #lastSentAtMs: number | null = null;
   #closedByUser = false;
@@ -106,6 +109,7 @@ export class IngestClient {
       sent: this.#sent,
       dropped: this.#dropped,
       reconnects: this.#reconnects,
+      connectionId: this.#connectionId,
       lastError: this.#lastError,
       lastSentAtMs: this.#lastSentAtMs,
     };
@@ -173,6 +177,7 @@ export class IngestClient {
     this.#sent = 0;
     this.#dropped = 0;
     this.#reconnects = 0;
+    this.#connectionId = 0;
     this.#attempt = 0;
     this.#lastError = null;
     this.#lastSentAtMs = null;
@@ -200,6 +205,7 @@ export class IngestClient {
         return;
       }
       this.#attempt = 0;
+      this.#connectionId += 1;
       this.#state = 'open';
       this.#emit();
       this.#flush();

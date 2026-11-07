@@ -1,5 +1,5 @@
 /**
- * Cliente AR de la Fase 3.
+ * Cliente AR de las fases 3 y 4.
  *
  * Flujo:
  *   1. Comprobar HTTPS y `immersive-ar`.
@@ -7,20 +7,36 @@
  *      `camera-access` opcional.
  *   3. En cada frame, convertir `XRViewerPose` a la convención de `shared`
  *      (marco `odom`) y enviar un mensaje `pose` al relay a `poseHz`.
- *   4. Mostrar tracking, FPS, estado del WebSocket y la posición en el overlay.
+ *   4. Si `camera-access` está disponible, capturar la textura de cámara a
+ *      `cameraHz`, reducirla a gris y mostrar una vista previa. Enviar `hello`
+ *      con los intrínsecos derivados (o calibrados) y el tamaño procesado.
+ *   5. Mostrar tracking, FPS, estado del WebSocket, cámara e intrínsecos.
  *
  * El servidor deriva la pose corregida con `T_WORLD_ODOM_INITIAL`; el cliente
  * solo calcula `world` para mostrar la posición en pantalla. La corrección con
- * marcadores llega en la Fase 4.
+ * marcadores llega en la Fase 6 y la detección en la Fase 5.
  */
-import type { Pose, PoseMessagePayload, TrackingState } from '@vio/shared';
+import type {
+  CameraCalibration,
+  CameraIntrinsics,
+  HelloMessage,
+  Pose,
+  PoseMessagePayload,
+  TrackingState,
+} from '@vio/shared';
 import { compose, poseFromWebXRMatrix, worldFromOdomInitial } from '@vio/shared';
+import { fetchCameraCalibration } from './camera-calibration';
+import type { CameraBindingLike, CameraFrame, XRViewWithCamera } from './camera-capture';
+import { CameraFrameGrabber, createCameraBinding } from './camera-capture';
 import { readRuntimeConfig } from './client-config';
+import { describeDevice } from './device-label';
 import { byId, formatVector } from './ui';
 import type { IngestConnectionState, IngestStats } from './ws-client';
 import { IngestClient } from './ws-client';
 
 type CameraFeatureState = 'unknown' | 'enabled' | 'unavailable';
+type CameraCaptureState = 'idle' | 'waiting' | 'capturing' | 'error';
+type IntrinsicsSource = 'none' | 'derived' | 'calibration';
 
 type XRSessionWithFeatures = XRSession & { enabledFeatures?: readonly string[] };
 
@@ -52,8 +68,15 @@ const overlayConnectionEl = byId<HTMLElement>('overlay-connection');
 const overlaySentEl = byId<HTMLElement>('overlay-sent');
 const overlayBufferedEl = byId<HTMLElement>('overlay-buffered');
 const overlayCameraEl = byId<HTMLElement>('overlay-camera');
+const overlayCameraStateEl = byId<HTMLElement>('overlay-camera-state');
+const overlayCameraSizeEl = byId<HTMLElement>('overlay-camera-size');
+const overlayCameraFpsEl = byId<HTMLElement>('overlay-camera-fps');
+const overlayIntrinsicsEl = byId<HTMLElement>('overlay-intrinsics');
+const overlayIntrinsicsSourceEl = byId<HTMLElement>('overlay-intrinsics-source');
+const overlayHelloEl = byId<HTMLElement>('overlay-hello');
 const overlayRawPEl = byId<HTMLElement>('overlay-raw-p');
 const overlayWorldPEl = byId<HTMLElement>('overlay-world-p');
+const cameraPreviewEl = byId<HTMLCanvasElement>('camera-preview');
 
 let session: XRSession | null = null;
 let referenceSpace: XRReferenceSpace | null = null;
@@ -64,6 +87,30 @@ let starting = false;
 let sessionActive = false;
 let tracking: TrackingState | 'unknown' = 'unknown';
 let cameraFeature: CameraFeatureState = 'unknown';
+let cameraCaptureState: CameraCaptureState = 'idle';
+let cameraBinding: CameraBindingLike | null = null;
+let cameraGrabber: CameraFrameGrabber | null = null;
+let cameraCalibration: CameraCalibration | null = null;
+let calibrationState: 'pending' | 'loaded' | 'missing' | 'error' = 'pending';
+let cameraIntrinsics: CameraIntrinsics | null = null;
+let intrinsicsSource: IntrinsicsSource = 'none';
+let cameraFrameInfo: {
+  width: number;
+  height: number;
+  sourceWidth: number;
+  sourceHeight: number;
+} | null = null;
+let cameraSkew = 0;
+let cameraFps = 0;
+let cameraFrameCount = 0;
+let lastCameraFpsTime = 0;
+let lastCameraCaptureMs = -1;
+let cameraProbeFrames = 0;
+let lastCameraErrorMs = 0;
+let lastHelloKey = '';
+let helloCount = 0;
+let previewContext: CanvasRenderingContext2D | null = null;
+let previewImageData: ImageData | null = null;
 let rawPose: Pose | null = null;
 let worldPose: Pose | null = null;
 let fps = 0;
@@ -181,6 +228,42 @@ function cameraLabel(state: CameraFeatureState): string {
   return state === 'unavailable' ? 'no habilitada' : '—';
 }
 
+function cameraStateLabel(): string {
+  if (cameraFeature === 'unavailable') {
+    return 'solo VIO';
+  }
+  switch (cameraCaptureState) {
+    case 'idle':
+      return '—';
+    case 'waiting':
+      return 'esperando imagen…';
+    case 'capturing':
+      return 'capturando';
+    case 'error':
+      return 'error de captura';
+  }
+}
+
+function intrinsicsSourceLabel(source: IntrinsicsSource): string {
+  switch (source) {
+    case 'calibration':
+      return 'calibración';
+    case 'derived':
+      return 'XRView';
+    case 'none':
+      return calibrationState === 'missing' ? 'sin imagen' : '—';
+  }
+}
+
+function formatIntrinsics(intrinsics: CameraIntrinsics | null, skew: number): string {
+  if (!intrinsics) {
+    return '—';
+  }
+  const values = [intrinsics.fx, intrinsics.fy, intrinsics.cx, intrinsics.cy];
+  const skewText = Math.abs(skew) > 0.01 ? `, skew ${skew.toFixed(2)}` : '';
+  return `[${values.map((value) => value.toFixed(1)).join(', ')}${skewText}]`;
+}
+
 function sessionLabel(): string {
   if (sessionActive) {
     return 'activa';
@@ -225,12 +308,28 @@ function updateUi(): void {
   overlayCameraEl.textContent = cameraLabel(cameraFeature);
   overlayCameraEl.className =
     cameraFeature === 'enabled' ? 'ok' : cameraFeature === 'unavailable' ? 'warn' : '';
+  overlayCameraStateEl.textContent = cameraStateLabel();
+  overlayCameraStateEl.className =
+    cameraCaptureState === 'capturing'
+      ? 'ok'
+      : cameraCaptureState === 'error' || cameraCaptureState === 'waiting'
+        ? 'warn'
+        : '';
+  overlayCameraSizeEl.textContent = cameraFrameInfo
+    ? `${cameraFrameInfo.width}×${cameraFrameInfo.height}`
+    : '—';
+  overlayCameraFpsEl.textContent = cameraFrameInfo ? cameraFps.toFixed(1) : '—';
+  overlayIntrinsicsEl.textContent = formatIntrinsics(cameraIntrinsics, cameraSkew);
+  overlayIntrinsicsSourceEl.textContent = intrinsicsSourceLabel(intrinsicsSource);
+  overlayHelloEl.textContent =
+    helloCount > 0 ? `${helloCount} enviado(s)` : cameraIntrinsics ? 'pendiente' : 'sin datos';
   overlayRawPEl.textContent = rawPose ? formatVector(rawPose.p) : '—';
   overlayWorldPEl.textContent = worldPose ? formatVector(worldPose.p) : '—';
 }
 
 const ingest = new IngestClient(config.ingestUrl, {
   onStateChange: () => {
+    maybeSendHello();
     updateUi();
   },
   logger: (message, level = 'info') => {
@@ -279,6 +378,162 @@ function renderClear(): void {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 }
 
+function loadCalibration(): void {
+  void (async () => {
+    const result = await fetchCameraCalibration(config.camera.calibrationUrl);
+    if (result.status === 'ok' && result.calibration) {
+      cameraCalibration = result.calibration;
+      calibrationState = 'loaded';
+      log(result.message, 'ok');
+    } else if (result.status === 'missing') {
+      cameraCalibration = null;
+      calibrationState = 'missing';
+      log(result.message, 'info');
+    } else {
+      cameraCalibration = null;
+      calibrationState = 'error';
+      log(result.message, 'warn');
+    }
+    cameraGrabber?.setCalibration(cameraCalibration);
+    updateUi();
+  })();
+}
+
+function drawCameraPreview(frame: CameraFrame): void {
+  if (!config.camera.preview) {
+    cameraPreviewEl.hidden = true;
+    return;
+  }
+
+  if (cameraPreviewEl.width !== frame.width || cameraPreviewEl.height !== frame.height) {
+    cameraPreviewEl.width = frame.width;
+    cameraPreviewEl.height = frame.height;
+    previewImageData = null;
+  }
+  if (!previewContext) {
+    previewContext = cameraPreviewEl.getContext('2d');
+  }
+  if (!previewContext) {
+    return;
+  }
+
+  if (!previewImageData) {
+    const pixels = new Uint8ClampedArray(
+      frame.rgba.buffer as ArrayBuffer,
+      frame.rgba.byteOffset,
+      frame.rgba.byteLength,
+    );
+    previewImageData = new ImageData(pixels, frame.width, frame.height);
+  }
+  previewContext.putImageData(previewImageData, 0, 0);
+  cameraPreviewEl.hidden = false;
+}
+
+function maybeSendHello(): void {
+  if (!cameraIntrinsics || !cameraFrameInfo) {
+    return;
+  }
+  const stats = ingest.getStats();
+  if (stats.state !== 'open') {
+    return;
+  }
+
+  const key = [
+    stats.connectionId,
+    intrinsicsSource,
+    cameraFrameInfo.width,
+    cameraFrameInfo.height,
+    Math.round(cameraIntrinsics.fx),
+    Math.round(cameraIntrinsics.fy),
+    Math.round(cameraIntrinsics.cx),
+    Math.round(cameraIntrinsics.cy),
+  ].join('|');
+  if (key === lastHelloKey) {
+    return;
+  }
+
+  const message: HelloMessage = {
+    type: 'hello',
+    device: describeDevice(navigator.userAgent),
+    intrinsics: cameraIntrinsics,
+    image_size: [cameraFrameInfo.width, cameraFrameInfo.height],
+  };
+  ingest.send(message);
+  lastHelloKey = key;
+  helloCount += 1;
+  log(
+    `hello enviado: ${message.device}, ${message.image_size[0]}×${message.image_size[1]}, ` +
+      `fx=${message.intrinsics.fx.toFixed(1)}, fy=${message.intrinsics.fy.toFixed(1)}`,
+    'ok',
+  );
+  updateUi();
+}
+
+function maybeCapture(time: number, viewerPose: XRViewerPose): void {
+  if (cameraFeature !== 'enabled' || !cameraGrabber) {
+    return;
+  }
+  const intervalMs = 1000 / config.camera.captureHz;
+  if (lastCameraCaptureMs >= 0 && time - lastCameraCaptureMs < intervalMs * 0.9) {
+    return;
+  }
+
+  const view = viewerPose.views.find(
+    (candidate) => (candidate as XRViewWithCamera).camera != null,
+  ) as XRViewWithCamera | undefined;
+  const camera = view?.camera;
+  if (!view || !camera) {
+    cameraProbeFrames += 1;
+    if (cameraProbeFrames === 1 && cameraCaptureState !== 'error') {
+      cameraCaptureState = 'waiting';
+    }
+    if (cameraProbeFrames === 120) {
+      log(
+        'La sesión habilitó camera-access pero ningún XRView expone view.camera; se continúa solo con VIO.',
+        'warn',
+      );
+    }
+    return;
+  }
+
+  lastCameraCaptureMs = time;
+  try {
+    const captured = cameraGrabber.capture(view, camera);
+    cameraProbeFrames = 0;
+    cameraCaptureState = 'capturing';
+    cameraFrameInfo = {
+      width: captured.width,
+      height: captured.height,
+      sourceWidth: captured.sourceWidth,
+      sourceHeight: captured.sourceHeight,
+    };
+    cameraIntrinsics = captured.intrinsics;
+    cameraSkew = captured.skew;
+    intrinsicsSource = cameraCalibration ? 'calibration' : 'derived';
+    drawCameraPreview(captured);
+
+    cameraFrameCount += 1;
+    if (lastCameraFpsTime === 0) {
+      lastCameraFpsTime = time;
+    } else {
+      const elapsed = time - lastCameraFpsTime;
+      if (elapsed >= config.statsWindowMs) {
+        cameraFps = (cameraFrameCount * 1000) / elapsed;
+        cameraFrameCount = 0;
+        lastCameraFpsTime = time;
+      }
+    }
+
+    maybeSendHello();
+  } catch (error) {
+    cameraCaptureState = 'error';
+    if (time - lastCameraErrorMs > 1000) {
+      lastCameraErrorMs = time;
+      log(`No se pudo capturar la cámara: ${errorMessage(error)}`, 'error');
+    }
+  }
+}
+
 function processFrame(time: number, frame: XRFrame): void {
   if (!referenceSpace) {
     return;
@@ -311,6 +566,10 @@ function processFrame(time: number, frame: XRFrame): void {
   } else {
     nullPoseFrames += 1;
     tracking = nullPoseFrames > config.trackingLostFrames ? 'lost' : 'limited';
+  }
+
+  if (viewerPose) {
+    maybeCapture(time, viewerPose);
   }
 
   renderClear();
@@ -365,9 +624,27 @@ function onSessionEnd(): void {
   layer = null;
   tracking = 'unknown';
   cameraFeature = 'unknown';
+  cameraCaptureState = 'idle';
+  cameraBinding = null;
+  cameraGrabber?.dispose();
+  cameraGrabber = null;
+  cameraIntrinsics = null;
+  intrinsicsSource = 'none';
+  cameraFrameInfo = null;
+  cameraSkew = 0;
+  cameraFps = 0;
+  cameraFrameCount = 0;
+  lastCameraFpsTime = 0;
+  lastCameraCaptureMs = -1;
+  cameraProbeFrames = 0;
+  lastCameraErrorMs = 0;
+  lastHelloKey = '';
+  helloCount = 0;
+  previewImageData = null;
   rawPose = null;
   worldPose = null;
   fps = 0;
+  cameraPreviewEl.hidden = true;
 
   if (current) {
     current.removeEventListener('end', onSessionEnd);
@@ -407,6 +684,24 @@ async function startSession(): Promise<void> {
   overlayStopButton.disabled = true;
   tracking = 'unknown';
   cameraFeature = 'unknown';
+  cameraCaptureState = 'idle';
+  cameraBinding = null;
+  cameraGrabber?.dispose();
+  cameraGrabber = null;
+  cameraIntrinsics = null;
+  intrinsicsSource = 'none';
+  cameraFrameInfo = null;
+  cameraSkew = 0;
+  cameraFps = 0;
+  cameraFrameCount = 0;
+  lastCameraFpsTime = 0;
+  lastCameraCaptureMs = -1;
+  cameraProbeFrames = 0;
+  lastCameraErrorMs = 0;
+  lastHelloKey = '';
+  helloCount = 0;
+  previewImageData = null;
+  cameraPreviewEl.hidden = true;
   rawPose = null;
   worldPose = null;
   fps = 0;
@@ -454,9 +749,16 @@ async function startSession(): Promise<void> {
     if (features.length > 0 && !features.includes('local-floor')) {
       log('local-floor no habilitado; se usará local como referencia', 'warn');
     }
-    cameraFeature = features.includes('camera-access') ? 'enabled' : 'unavailable';
-    if (cameraFeature === 'unavailable') {
-      log('camera-access no está disponible; la Fase 4 quedará bloqueada', 'warn');
+    if (features.length > 0) {
+      cameraFeature = features.includes('camera-access') ? 'enabled' : 'unavailable';
+      if (cameraFeature === 'unavailable') {
+        log('camera-access no está disponible; se continúa solo con VIO.', 'warn');
+      }
+    } else {
+      // Si el navegador no expone enabledFeatures, se intenta capturar; el
+      // primer frame sin view.camera o un getCameraImage fallido lo degradan.
+      cameraFeature = 'enabled';
+      log('enabledFeatures no está expuesto; se intentará usar camera-access', 'warn');
     }
 
     current.addEventListener('end', onSessionEnd);
@@ -470,6 +772,38 @@ async function startSession(): Promise<void> {
     current.updateRenderState({ baseLayer: layer });
     if (session !== current) {
       return;
+    }
+
+    if (cameraFeature === 'enabled') {
+      try {
+        cameraBinding = createCameraBinding(current, gl);
+      } catch (error) {
+        cameraBinding = null;
+        log(`No se pudo crear XRWebGLBinding: ${errorMessage(error)}`, 'error');
+      }
+      if (!cameraBinding) {
+        cameraFeature = 'unavailable';
+        log(
+          'XRWebGLBinding no expone getCameraImage en este navegador; se continúa solo con VIO.',
+          'warn',
+        );
+      } else {
+        try {
+          cameraGrabber = new CameraFrameGrabber(gl, cameraBinding, {
+            maxDimension: config.camera.maxDimension,
+            calibration: cameraCalibration,
+          });
+          log(
+            `Captura de cámara: hasta ${config.camera.captureHz} Hz, ` +
+              `lado máximo ${config.camera.maxDimension} px`,
+            'info',
+          );
+        } catch (error) {
+          cameraGrabber = null;
+          cameraFeature = 'unavailable';
+          log(`No se pudo preparar la captura de cámara: ${errorMessage(error)}`, 'error');
+        }
+      }
     }
 
     starting = false;
@@ -528,6 +862,10 @@ async function init(): Promise<void> {
     log(warning, 'warn');
   }
   log(`Relay configurado: ${config.ingestUrl}`, 'info');
+  if (!config.camera.preview) {
+    cameraPreviewEl.hidden = true;
+  }
+  loadCalibration();
   ingest.connect();
 
   if (!window.isSecureContext) {
@@ -558,7 +896,8 @@ async function init(): Promise<void> {
       'Este navegador o dispositivo no soporta immersive-ar. El emulador de Android Studio no implementa WebXR; probá en un celular ARCore por HTTPS.';
   } else if (window.isSecureContext) {
     hintEl.textContent =
-      'Todo listo. Al iniciar la sesión, la pose se envía al relay y Foxglove la muestra en /pose/raw.';
+      'Todo listo. Al iniciar la sesión, la pose se envía al relay y, si camera-access está disponible, ' +
+      'la imagen en gris y los intrínsecos se publican en el overlay.';
   }
 
   startButton.disabled = !(window.isSecureContext && supported === true);

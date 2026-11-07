@@ -30,3 +30,6 @@ Desktop.ini
 
 # Certificados y claves locales de mkcert
 certs/
+
+# Calibración de cámara local (se versiona solo el ejemplo)
+config/camera_intrinsics.json

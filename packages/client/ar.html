@@ -14,12 +14,13 @@
     <main class="page ar-ui" id="start-screen">
       <header class="ar-header">
         <div>
-          <p class="eyebrow">Fase 3 · pose cruda en vivo</p>
+          <p class="eyebrow">Fase 3 + 4 · pose cruda, cámara e intrínsecos</p>
           <h1>Cliente AR</h1>
           <p class="lead">
             La pose de WebXR/ARCore se envía al relay y aparece en Foxglove Studio como
-            <code>/pose/raw</code> en el marco <code>odom</code>. La corrección con marcadores llega
-            en la Fase 4.
+            <code>/pose/raw</code> en el marco <code>odom</code>. Si <code>camera-access</code> está
+            disponible, la app captura la imagen en gris, muestra una vista previa y envía
+            <code>hello</code> con los intrínsecos. La detección de marcadores llega en la Fase 5.
           </p>
         </div>
         <a class="button small" href="/">Volver</a>
@@ -41,9 +42,14 @@
             <dt>Relay</dt>
             <dd id="ingest-url">—</dd>
             <dt>Frecuencia</dt>
-            <dd><span id="pose-hz">30</span> Hz</dd>
+            <dd><span id="pose-hz">30</span> Hz de pose</dd>
             <dt>Foxglove</dt>
             <dd id="foxglove-url">—</dd>
+            <dt>Calibración</dt>
+            <dd>
+              <code>config/camera_intrinsics.json</code> es opcional; sin ese archivo los
+              intrínsecos se derivan de <code>XRView.projectionMatrix</code>.
+            </dd>
           </dl>
 
           <p class="muted" id="hint">
@@ -79,7 +85,23 @@
         </div>
         <div class="row">
           <span>Cámara: <strong id="overlay-camera">—</strong></span>
+          <span>Estado: <strong id="overlay-camera-state">—</strong></span>
+          <span>Imagen: <strong id="overlay-camera-size">—</strong></span>
+          <span>Captura: <strong id="overlay-camera-fps">—</strong> Hz</span>
         </div>
+        <div class="row">
+          <span>Intrínsecos: <strong class="value" id="overlay-intrinsics">—</strong></span>
+          <span>Fuente: <strong id="overlay-intrinsics-source">—</strong></span>
+        </div>
+        <div class="row">
+          <span>hello: <strong id="overlay-hello">—</strong></span>
+        </div>
+        <canvas
+          id="camera-preview"
+          class="camera-preview"
+          aria-label="Vista previa en gris de la cámara"
+          hidden
+        ></canvas>
       </div>
 
       <div class="overlay-panel">

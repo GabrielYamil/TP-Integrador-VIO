@@ -193,6 +193,57 @@ const matrix32 = poseToWebXRMatrix(pose);
 - `poseToWebXRMatrix` devuelve `Float32Array`, como espera WebXR.
 - La conversión no cambia de convención: solo empaqueta la pose de WebXR.
 
+### 6.1. Intrínsecos de cámara (Fase 4)
+
+La imagen cruda se obtiene de `XRWebGLBinding.getCameraImage(view.camera)`
+cuando la sesión habilitó `camera-access`. La API garantiza que la imagen está
+alineada con ese `XRView` (ver el explainer oficial de Raw Camera Access:
+`https://github.com/immersive-web/raw-camera-access`).
+
+La textura de cámara tiene origen **abajo a la izquierda**. El cliente la dibuja
+en un framebuffer propio del tamaño procesado, invierte `v` en el shader y lee
+con `readPixels`. Así la fila 0 del buffer corresponde al borde superior de la
+imagen; el buffer en gris queda row-major con origen **arriba a la izquierda**,
+igual que OpenCV.
+
+Con `p = XRView.projectionMatrix` (column-major) y un viewport del tamaño de la
+imagen de cámara, los intrínsecos se derivan con las fórmulas del explainer:
+
+```text
+fx    = vp.width / 2 * p[0]
+fy    = vp.height / 2 * p[5]
+skew  = vp.width / 2 * p[4]
+cx    = (1 - p[8]) * vp.width / 2 + vp.x
+cy_bl = (1 - p[9]) * vp.height / 2 + vp.y   # origen abajo
+cy_tl = vp.y + vp.height - (cy_bl - vp.y)   # origen arriba (OpenCV)
+```
+
+El cliente usa `cy_tl` y luego escala `fx`, `fy`, `cx`, `cy` y `skew` a la
+resolución procesada (`maxDimension`, 640 px por defecto en el lado mayor). La
+implementación vive en `packages/shared/src/camera/intrinsics.ts`.
+
+#### Calibración opcional
+
+Si existe `config/camera_intrinsics.json`, el cliente usa esos valores en lugar
+de los derivados. El archivo no se versiona; el ejemplo es
+`config/camera_intrinsics.example.json` y el esquema está en
+`packages/shared/src/camera/calibration.ts`:
+
+```json
+{
+  "image_size": [1920, 1080],
+  "intrinsics": { "fx": 1536.0, "fy": 1536.0, "cx": 960.0, "cy": 540.0 },
+  "reprojection_error_px": 0.42,
+  "note": "Calibración con tablero"
+}
+```
+
+`image_size` es la resolución para la que se calibró. Los intrínsecos se escalan
+por separado en `x` e `y` a la imagen procesada. La calibración de OpenCV ya
+tiene origen arriba a la izquierda, así que **no** se refleja `cy`. El servidor
+sirve el archivo en `GET /config/camera_intrinsics.json`: 200 si es válido, 404
+si no existe y 503 si está presente pero no cumple el esquema.
+
 ## 7. Unidades y tiempo
 
 - Longitudes: metros.
@@ -268,6 +319,13 @@ marco `odom`, y omite `corrected`; el servidor deriva la pose corregida con
 `parseClientMessage` devuelve `{ ok: true, message }` o
 `{ ok: false, error }`. `parseClientMessageJson` hace lo mismo a partir del
 texto recibido por WebSocket.
+
+En la Fase 4, `/ar.html` envía `hello` cuando la conexión está abierta y ya hay
+intrínsecos disponibles. `image_size` e `intrinsics` corresponden a la imagen
+procesada (por ejemplo `640 × 480`), no necesariamente a la textura original de
+la cámara. El mensaje se reenvía después de cada reconexión para que el servidor
+vuelva a asociar el dispositivo. El nombre del dispositivo se extrae del
+User-Agent de Android y se recorta a 256 caracteres.
 
 ## 9. Relay y publicación en Foxglove
 

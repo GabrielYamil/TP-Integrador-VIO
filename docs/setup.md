@@ -2,9 +2,9 @@
 
 Esta guía cubre la instalación, los certificados HTTPS, la ejecución local, la
 verificación de la Fase 0, la prueba del relay y Foxglove de la Fase 2 y el
-cliente AR de la Fase 3. La validación en el celular es obligatoria: el
+cliente AR de las fases 3 y 4. La validación en el celular es obligatoria: el
 emulador de Android Studio no implementa WebXR y no sirve para aceptar la
-Fase 0 ni la Fase 3.
+Fase 0, la Fase 3 ni la Fase 4.
 
 ## 1. Requisitos
 
@@ -209,7 +209,7 @@ muestre Vite: `http://localhost:5173/mock.html` si no hay certificados, o
 | Página         | Ruta            | Uso                                              |
 | -------------- | --------------- | ------------------------------------------------ |
 | Inicio         | `/`             | Estado del entorno y accesos.                    |
-| Cliente AR     | `/ar.html`      | Fase 3: sesión AR y pose cruda al relay.         |
+| Cliente AR     | `/ar.html`      | Fases 3 y 4: pose, cámara en gris e intrínsecos. |
 | Diagnóstico AR | `/ar-test.html` | Prueba real de `immersive-ar` y `camera-access`. |
 | Mock           | `/mock.html`    | Webcam y pose simulada en escritorio.            |
 | Salud          | `/health`       | JSON del servidor, la ingesta y Foxglove.        |
@@ -230,11 +230,22 @@ muestre Vite: `http://localhost:5173/mock.html` si no hay certificados, o
 6. En `/ar.html`, desde la PC, la sesión AR también puede no estar soportada,
    pero el relay debe figurar como **conectado**. Eso confirma que el cliente
    WebSocket y el proxy `/ingest` funcionan antes de probar en el celular.
+7. Comprobá el endpoint de calibración:
 
-## 6. Relay, Foxglove y cliente AR (Fases 2 y 3)
+   ```powershell
+   curl.exe -k -i https://localhost:8443/config/camera_intrinsics.json
+   ```
+
+   Sin `config/camera_intrinsics.json` debe responder **404** con
+   `camera_intrinsics_not_found`. Si copiás el ejemplo como
+   `config/camera_intrinsics.json` y reiniciás el servidor, debe responder
+   **200** con `image_size` e `intrinsics`; `/health` debe mostrar
+   `camera_intrinsics.available: true`.
+
+## 6. Relay, Foxglove y cliente AR (Fases 2 a 4)
 
 Esta verificación no necesita el celular: usa el simulador y Foxglove Studio de
-escritorio. El cliente AR de la Fase 3 se prueba en la sección 7.
+escritorio. El cliente AR de las fases 3 y 4 se prueba en la sección 7.
 
 1. Dejá el servidor corriendo con `pnpm dev` o, para la versión compilada,
    `pnpm build` seguido de `pnpm start`.
@@ -276,11 +287,12 @@ escritorio. El cliente AR de la Fase 3 se prueba en la sección 7.
 | `--insecure`   | desactivado                   | No verifica TLS; solo para pruebas locales. |
 | `--log-level`  | `info`                        | `debug`, `info`, `warn`, `error`, `silent`. |
 
-### Cliente AR (Fase 3)
+### Cliente AR (Fases 3 y 4)
 
-`/ar.html` es el cliente real de la Fase 3. A diferencia del simulador, usa la
-pose de WebXR/ARCore y no envía `hello` porque todavía no tiene intrínsecos ni
-imagen de cámara.
+`/ar.html` es el cliente real. Usa la pose de WebXR/ARCore y, si la sesión
+habilita `camera-access`, captura la imagen con `getCameraImage`, la convierte a
+gris y envía `hello` con los intrínsecos. Si `camera-access` no está disponible,
+sigue funcionando solo con VIO y lo indica en el overlay.
 
 1. Abrí `/ar.html` por HTTPS. La página comprueba `window.isSecureContext` y
    `navigator.xr.isSessionSupported('immersive-ar')`.
@@ -288,21 +300,48 @@ imagen de cámara.
    URL de `?ingest=` y la consola del servidor.
 3. Presioná **Iniciar AR** y aceptá los permisos de Chrome/ARCore.
 4. En el overlay verificá tracking, FPS, conexión, mensajes enviados y buffer.
-5. En Foxglove Studio, con `ws://IP_DE_LA_PC:8765`, mirá `/pose/raw` en `odom`,
+5. Si `camera-access` está habilitado, verificá:
+   - **Cámara: habilitada** y **Estado: capturando**;
+   - **Imagen** con el tamaño procesado (por ejemplo `640×480`);
+   - **Captura** cercana a 10 Hz;
+   - **Intrínsecos** con valores plausibles y **Fuente: XRView** o
+     **calibración**;
+   - la vista previa en gris, con el mismo arriba/abajo que la escena real;
+   - **hello** con al menos un envío.
+6. En Foxglove Studio, con `ws://IP_DE_LA_PC:8765`, mirá `/pose/raw` en `odom`,
    `/pose/corrected` en `world` y el árbol `/tf`. La pose corregida usa
    `T_WORLD_ODOM_INITIAL` hasta que exista detección de marcadores.
-6. Para pruebas controladas, la URL acepta:
+7. Para pruebas controladas, la URL acepta:
 
    ```text
    /ar.html?hz=15&ingest=wss://192.168.1.18:8443/ingest
+   /ar.html?camhz=5&camw=480&preview=0
    ```
 
-   `hz` se limita a 1–60. La URL de `ingest` debe ser `ws://` o `wss://`.
+   `hz` se limita a 1–60. `camhz` se limita a 1–30. `camw` es el lado mayor de
+   la imagen procesada y se limita a 80–1920 px. `preview=0` apaga la vista
+   previa para ahorrar CPU/GPU. La URL de `ingest` debe ser `ws://` o `wss://`.
 
 El overlay muestra **0 marcadores** porque la detección AprilTag empieza en la
-Fase 5; el contador se conectará al detector en esa fase. El criterio de
-aceptación de la Fase 3 se verifica caminando con el celular y comprobando la
-fluidez y la orientación de los ejes en Foxglove (sección 7).
+Fase 5; el contador se conectará al detector en esa fase.
+
+### Calibración opcional de cámara
+
+Sin archivo de calibración, los intrínsecos se derivan de
+`XRView.projectionMatrix`. Para usar una calibración medida con tablero:
+
+```powershell
+Copy-Item config/camera_intrinsics.example.json config/camera_intrinsics.json
+# editar image_size e intrinsics con los valores de OpenCV
+pnpm dev
+```
+
+El archivo no se versiona y se sirve en `/config/camera_intrinsics.json`. El
+esquema exige `image_size` e `intrinsics` y acepta `reprojection_error_px` y
+`note` opcionales. Los valores se escalan a la imagen procesada sin reflejar
+`cy`, porque OpenCV ya usa origen arriba a la izquierda. Si el archivo está
+presente pero es inválido, el servidor responde 503 y el cliente registra el
+error y vuelve a los intrínsecos derivados.
 
 El servidor Foxglove usa `ws://` sin TLS porque queda en la red local. La
 telemetría del celular sí viaja por `wss://` al puerto 8443.
@@ -312,10 +351,10 @@ Si Foxglove no muestra los tópicos, revisá en `/health` el campo
 relay, ejecutá el simulador con `--log-level debug` y mirá los mensajes
 `[server:ingest]`.
 
-## 7. Verificación manual en el celular (Fases 0 y 3)
+## 7. Verificación manual en el celular (Fases 0, 3 y 4)
 
-Esta es la parte que cierra los criterios de aceptación de la Fase 0 y de la
-Fase 3. Anotá el resultado en `docs/results.md` o adjuntá el reporte copiado
+Esta es la parte que cierra los criterios de aceptación de la Fase 0, la Fase 3
+y la Fase 4. Anotá el resultado en `docs/results.md` o adjuntá el reporte copiado
 desde la página.
 
 1. Confirmá que el celular y la PC están en la misma red y que la PC responde
@@ -332,15 +371,24 @@ desde la página.
    - FPS estable y cercano a la tasa de frames del dispositivo;
    - conexión en **conectado**, mensajes enviados crecientes y buffer en 0;
    - el contador de marcadores queda en 0: la detección llega en la Fase 5.
-8. Abrí Foxglove Studio en `ws://IP_DE_LA_PC:8765` y suscribite a `/pose/raw`,
+8. Si `camera-access` está disponible, confirmá:
+   - **Cámara: habilitada**, **Estado: capturando** e **Imagen** con tamaño
+     procesado;
+   - **Captura** ≥ 10 Hz (o el valor configurado con `camhz`);
+   - la vista previa en gris coincide con la escena y no está invertida;
+   - **Intrínsecos** estables y **Fuente** correcta;
+   - **hello** con al menos un envío;
+   - en `/health`, `byType.hello` mayor que 0 y el dispositivo en
+     `ingest.devices`.
+9. Abrí Foxglove Studio en `ws://IP_DE_LA_PC:8765` y suscribite a `/pose/raw`,
    `/pose/corrected`, `/tf`, `/markers` y `/metrics`.
-9. Caminá unos metros, girate y agachate/saltá. En Foxglove:
-   - el marco de la cámara debe moverse de forma fluida y consistente;
-   - avanzar hacia adelante debe mover el marco en la dirección esperada de
-     `world` (el eje `+x` al inicio);
-   - los giros y el movimiento vertical deben corresponder al movimiento real;
-   - `/pose/raw` debe estar en `odom` y `/pose/corrected` en `world`.
-10. Entrá a **Diagnóstico WebXR** (`/ar-test.html`) para comprobar
+10. Caminá unos metros, girate y agachate/saltá. En Foxglove:
+    - el marco de la cámara debe moverse de forma fluida y consistente;
+    - avanzar hacia adelante debe mover el marco en la dirección esperada de
+      `world` (el eje `+x` al inicio);
+    - los giros y el movimiento vertical deben corresponder al movimiento real;
+    - `/pose/raw` debe estar en `odom` y `/pose/corrected` en `world`.
+11. Entrá a **Diagnóstico WebXR** (`/ar-test.html`) para comprobar
     `camera-access`, reference spaces y la textura de cámara. Copiá el reporte
     como evidencia.
 
@@ -349,12 +397,17 @@ desde la página.
 - **Sesión AR inicia y tracking OK:** se cumple el criterio de la Fase 0.
 - **La pose de `/ar.html` llega y se mueve con fluidez, con ejes correctos:** se
   cumple el criterio de la Fase 3.
+- **La imagen en gris se ve a ≥10 Hz con orientación correcta y `hello` llega
+  con intrínsecos:** se cumple el criterio de la Fase 4.
 - **La pose llega pero los ejes no coinciden:** no aceptar la Fase 3; revisar
   `docs/conventions.md`, la conversión `poseFromWebXRMatrix` y la orientación
   inicial `T_WORLD_ODOM_INITIAL` antes de avanzar.
+- **La imagen se ve invertida o girada:** no aceptar la Fase 4; revisar la
+  inversión de `v` en `camera-capture.ts`, el origen top-left de `cy` y la
+  orientación real del sensor. Anotar el modelo de celular y una captura.
 - **`camera-access` no está disponible:** la Fase 3 no se ve afectada porque
   solo usa la pose, pero la Fase 4 queda bloqueada. Anotarlo como riesgo.
-- **No inicia o no hay pose:** revisar la sección 8 y no avanzar a la Fase 4
+- **No inicia o no hay pose:** revisar la sección 8 y no avanzar a la Fase 5
   hasta resolverlo.
 - **Certificado inválido:** no seguir; WebXR no funciona de forma confiable sin
   un contexto seguro válido.
@@ -427,6 +480,37 @@ puede iniciar igual, pero no habrá imagen para detectar marcadores. Anotá el
 modelo, la versión de Chrome y el contenido de `enabledFeatures`. Es un riesgo
 de la Fase 4, no algo que se resuelva con un test unitario.
 
+### El overlay dice "esperando imagen…" o "error de captura"
+
+- **Estado: esperando imagen…** significa que la sesión habilitó
+  `camera-access` pero ningún `XRView` expone `view.camera`. El cliente sigue
+  solo con VIO y registra un aviso después de 120 frames.
+- **Estado: error de captura** indica que `getCameraImage` devolvió `null`, la
+  textura no era válida o `readPixels` falló. Revisá la consola de Chrome; el
+  log incluye el error WebGL.
+- Si `XRWebGLBinding` no existe, `/ar.html` degrada a solo VIO y lo informa en
+  el overlay.
+- Cerrá otras apps que usen la cámara y reiniciá la sesión AR.
+
+### La vista previa se ve invertida o girada
+
+La textura de cámara de WebXR tiene origen abajo a la izquierda. El shader
+invierte `v` para producir una imagen top-left. Si la vista previa no coincide
+con la escena, revisá `packages/client/src/camera-capture.ts` y anotá el modelo
+de celular y la orientación del dispositivo (vertical/horizontal). No aceptes
+la Fase 4 hasta corregirlo.
+
+### Los intrínsecos no son plausibles
+
+- Confirmá que `image_size` del `hello` coincide con la imagen procesada
+  (`640×480`, `640×360`, etc.), no con la textura original.
+- Revisá que la calibración opcional esté definida para su propia
+  `image_size`; el cliente la escala.
+- Si usás `config/camera_intrinsics.json`, verificá que el endpoint responda
+  200 y que `/health` muestre `camera_intrinsics.available: true`.
+- Los valores derivados dependen de `XRView.projectionMatrix`; una calibración
+  con tablero es la alternativa si el error de PnP es alto.
+
 ### `adb reverse` como plan B
 
 Con depuración USB activa y `adb` en el `PATH`:
@@ -483,7 +567,7 @@ automáticos; ver `docs/results.md`.
 
 ### Checklist de Fase 2
 
-- [x] `pnpm test` pasa los 13 tests del servidor.
+- [x] `pnpm test` pasa los 13 tests de la Fase 2 (16 actuales del servidor).
 - [x] `/health` muestra los bloques `ingest` y `foxglove`.
 - [x] `pnpm sim` envía poses y `messagesValid` aumenta.
 - [x] Foxglove Studio se conecta a `ws://IP_DE_LA_PC:8765`.
@@ -501,7 +585,7 @@ ARCore disponible.
 ### Checklist de Fase 3
 
 - [x] `/ar.html` compila en el build multipágina y se sirve por HTTPS.
-- [x] `pnpm test` pasa los 7 tests del cliente (53 en total).
+- [x] `pnpm test` pasa los 7 tests originales del cliente.
 - [x] El relay acepta un mensaje `pose` crudo sin `hello` (1 válido, 0 inválidos).
 - [x] El cliente reconecta, bufferiza y descarta mensajes viejos (tests).
 - [ ] `/ar.html` inicia una sesión `immersive-ar` en el celular.
@@ -515,3 +599,34 @@ ARCore disponible.
 La Fase 3 está implementada en código y cubierta por tests de transporte, pero
 el criterio de aceptación depende de la prueba en el celular. No se declara
 cerrada hasta completar los ítems pendientes.
+
+### Checklist de Fase 4
+
+- [x] La captura compila y se incluye en el build multipágina.
+- [x] `pnpm test` pasa los 85 tests (44 shared + 25 client + 16 server).
+- [x] El endpoint `/config/camera_intrinsics.json` responde 404 sin archivo.
+- [x] Con una calibración válida responde 200 y `/health` marca
+      `camera_intrinsics.available: true`.
+- [x] Los tests cubren tamaño de captura, derivación de intrínsecos, escalado,
+      calibración, etiqueta del dispositivo y `hello` tras reconexión.
+- [ ] `camera-access` se habilita en el celular y `getCameraImage` devuelve una
+      textura.
+- [ ] La vista previa en gris se ve a ≥10 Hz y con orientación correcta.
+- [ ] Los intrínsecos del overlay son estables y corresponden a la imagen
+      procesada.
+- [ ] El servidor recibe `hello` (`byType.hello > 0`) con el dispositivo y
+      `image_size` correctos.
+- [ ] Con una calibración propia, el cliente usa `Fuente: calibración` y los
+      valores escalados.
+- [ ] La prueba se registra en `docs/results.md`.
+
+La Fase 4 está implementada en código y verificada en la PC hasta el endpoint y
+los tests. El criterio de aceptación —imagen gris visible a ≥10 Hz con
+orientación correcta— requiere un celular con `camera-access`. No se declara
+cerrada hasta completar los ítems pendientes.
+
+### Checklist de Fase 5 en adelante
+
+No iniciar la Fase 5 hasta aceptar la Fase 4 en un celular real. La detección
+AprilTag necesita la textura, los intrínsecos y la orientación de la imagen ya
+validados.

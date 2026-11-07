@@ -88,7 +88,7 @@ describe('IngestClient', () => {
     expect(subject.getStats().state).toBe('connecting');
 
     sockets[0].open();
-    expect(subject.getStats().state).toBe('open');
+    expect(subject.getStats()).toMatchObject({ state: 'open', connectionId: 1 });
 
     subject.send(poseMessage(1));
 
@@ -164,7 +164,7 @@ describe('IngestClient', () => {
     expect(factoryCalls).toHaveLength(3);
 
     sockets[2].open();
-    expect(subject.getStats().state).toBe('open');
+    expect(subject.getStats()).toMatchObject({ state: 'open', connectionId: 2 });
   });
 
   it('stops reconnecting and drops new messages after close()', () => {

@@ -13,10 +13,11 @@ documentación y la interfaz están en español; el código y los tests en ingl�
 | Fase                                | Estado                                                       |
 | ----------------------------------- | ------------------------------------------------------------ |
 | 0 — entorno, HTTPS y prueba AR      | Implementada en código. **Validación en celular pendiente.** |
-| 1 — matemática SE(3) y convenciones | Completada. 33 tests pasan.                                  |
+| 1 — matemática SE(3) y convenciones | Completada.                                                  |
 | 2 — relay y servidor Foxglove       | Completada. Validada en Foxglove Studio 3.5.0.               |
 | 3 — cliente WebXR y pose cruda      | Implementada en código. **Validación en celular pendiente.** |
-| 4 a 10                              | Pendientes.                                                  |
+| 4 — cámara e intrínsecos            | Implementada en código. **Validación en celular pendiente.** |
+| 5 a 10                              | Pendientes.                                                  |
 
 La Fase 0 incluye el servidor HTTPS, el script de certificados, las páginas de
 diagnóstico WebXR y el modo mock de escritorio. Los certificados de mkcert se
@@ -35,8 +36,18 @@ La Fase 3 agrega `/ar.html`: sesión `immersive-ar`, reference space
 `local-floor` con fallback a `local`, overlay con tracking/FPS/conexión y envío
 de pose cruda en `odom` a ~30 Hz. El cliente WebSocket reconecta con backoff,
 mantiene un buffer acotado y descarta mensajes viejos. La pose corregida la
-deriva el servidor con `T_WORLD_ODOM_INITIAL`. Los 7 tests del transporte pasan;
-la validación en celular sigue pendiente.
+deriva el servidor con `T_WORLD_ODOM_INITIAL`. Los 7 tests originales del
+transporte pasan; la validación en celular sigue pendiente.
+
+La Fase 4 agrega la captura de cámara cuando `camera-access` está disponible:
+`XRWebGLBinding.getCameraImage` se reduce en GPU a un framebuffer de 640 px de
+lado máximo, se convierte a gris con origen arriba a la izquierda y se muestra
+en el overlay. Los intrínsecos se derivan de `XRView.projectionMatrix` o se
+cargan de la calibración opcional `config/camera_intrinsics.json`; se envían en
+un mensaje `hello` al abrir la conexión y después de cada reconexión. El
+servidor expone `GET /config/camera_intrinsics.json` (404 si no hay archivo).
+La captura real y la orientación de la imagen todavía no se validaron en un
+celular.
 
 ## Arquitectura
 
@@ -63,7 +74,8 @@ PC: servidor Node.js
 
 En las fases actuales existen el navegador, el servidor HTTPS, el relay
 `/ingest`, el servidor Foxglove, la matemática de poses, el mapa demo, el
-simulador y el cliente `/ar.html`, que ya envía la pose cruda de WebXR. La
+simulador y el cliente `/ar.html`, que envía la pose cruda de WebXR y, si
+`camera-access` está disponible, la imagen en gris con sus intrínsecos. La
 detección y la corrección llegan en las fases 5 y 6; hasta entonces, la pose
 corregida se deriva con `T_WORLD_ODOM_INITIAL`.
 
@@ -72,7 +84,8 @@ corregida se deriva con `T_WORLD_ODOM_INITIAL`.
 ```text
 .
 ├── config/
-│   └── marker_map.json        # mapa de marcadores de la sala demo
+│   ├── marker_map.json        # mapa de marcadores de la sala demo
+│   └── camera_intrinsics.example.json  # calibración opcional (ejemplo)
 ├── docs/
 │   ├── setup.md               # instalación, HTTPS y checklist manual
 │   ├── conventions.md         # fuente de verdad de ejes y fórmulas
@@ -121,7 +134,8 @@ Luego:
 2. Conectá el celular a la misma WiFi que la PC.
 3. Abrí `https://IP_DE_LA_PC:5173/` en Chrome Android.
 4. Verificá que el certificado no muestre advertencias.
-5. Entrá a **Abrir cliente AR (Fase 3)** (`/ar.html`) y presioná **Iniciar AR**.
+5. Entrá a **Abrir cliente AR (Fases 3 y 4)** (`/ar.html`) y presioná
+   **Iniciar AR**.
 6. Para inspeccionar `camera-access` y copiar un reporte, usá **Diagnóstico
    WebXR** (`/ar-test.html`).
 
@@ -182,13 +196,13 @@ simulada en la convención de WebXR. No valida ARCore ni `camera-access`.
 
 ## Páginas
 
-| Ruta            | Descripción                                                     |
-| --------------- | --------------------------------------------------------------- |
-| `/`             | Estado del entorno, enlaces y verificación del servidor.        |
-| `/ar.html`      | Cliente de la Fase 3: sesión AR, overlay y pose cruda al relay. |
-| `/ar-test.html` | Prueba de `immersive-ar`, reference spaces y `camera-access`.   |
-| `/mock.html`    | Webcam y simulación de pose para escritorio.                    |
-| `/health`       | Estado del servidor, la ingesta y Foxglove en JSON.             |
+| Ruta            | Descripción                                                           |
+| --------------- | --------------------------------------------------------------------- |
+| `/`             | Estado del entorno, enlaces y verificación del servidor.              |
+| `/ar.html`      | Cliente de las fases 3 y 4: pose cruda, cámara en gris e intrínsecos. |
+| `/ar-test.html` | Prueba de `immersive-ar`, reference spaces y `camera-access`.         |
+| `/mock.html`    | Webcam y simulación de pose para escritorio.                          |
+| `/health`       | Estado del servidor, la ingesta, la calibración y Foxglove en JSON.   |
 
 ## Comandos
 
@@ -202,7 +216,7 @@ simulada en la convención de WebXR. No valida ARCore ni `camera-access`.
 | `pnpm sim`                          | Simulador de cliente contra `/ingest`.                        |
 | `pnpm preview`                      | `pnpm build` seguido de `pnpm start`.                         |
 | `pnpm typecheck`                    | TypeScript estricto en todos los paquetes.                    |
-| `pnpm test`                         | Vitest. En el estado actual: 8 archivos, 53 tests.            |
+| `pnpm test`                         | Vitest. En el estado actual: 15 archivos, 85 tests.           |
 | `pnpm lint`                         | ESLint.                                                       |
 | `pnpm format` / `pnpm format:check` | Prettier sobre el repo.                                       |
 | `pnpm cert:setup`                   | Genera certificados mkcert, exporta la CA y abre el firewall. |
@@ -248,7 +262,25 @@ AprilTags de 16 cm. Las imágenes y el PDF se generan con `pnpm markers`; el
 procedimiento de impresión al 100 %, la orientación física y cómo medir una
 sala real están en [`docs/marker-map.md`](docs/marker-map.md).
 
-Los PNG, el PDF, los certificados y los logs de corridas no se versionan.
+Los PNG, el PDF, los certificados, la calibración local y los logs de corridas
+no se versionan.
+
+## Calibración de cámara
+
+La calibración es opcional. Sin `config/camera_intrinsics.json`, `/ar.html`
+deriva `fx`, `fy`, `cx` y `cy` de `XRView.projectionMatrix` y del tamaño de la
+imagen de cámara. Para usar una calibración propia:
+
+```powershell
+Copy-Item config/camera_intrinsics.example.json config/camera_intrinsics.json
+# editar image_size e intrinsics con los valores medidos
+pnpm dev
+```
+
+El servidor sirve el archivo en `/config/camera_intrinsics.json` y lo valida con
+zod. Si el archivo no existe responde 404; si es inválido, 503. Los valores se
+escalan a la resolución procesada (640 px de lado máximo por defecto). Ver
+[`docs/conventions.md`](docs/conventions.md#61-intrínsecos-de-cámara-fase-4).
 
 ## Testing y validación
 
@@ -261,8 +293,8 @@ pnpm format:check
 ```
 
 El estado de los tests automáticos y las verificaciones manuales pendientes se
-documenta en [`docs/results.md`](docs/results.md). En el estado actual hay 8
-archivos y 53 tests: 33 de `packages/shared`, 7 de `packages/client` y 13 de
+documenta en [`docs/results.md`](docs/results.md). En el estado actual hay 15
+archivos y 85 tests: 44 de `packages/shared`, 25 de `packages/client` y 16 de
 `packages/server`. La prueba en celular no se puede reemplazar con tests
 unitarios ni con el emulador. La conexión a Foxglove Studio se validó en
 escritorio; la telemetría real del celular sigue pendiente.
@@ -274,9 +306,10 @@ escritorio; la telemetría real del celular sigue pendiente.
 2. **Fase 2:** completada. Relay, Foxglove y simulador validados en escritorio.
 3. **Fase 3:** implementada en código. Falta validar la pose en vivo y los ejes
    en un celular ARCore.
-4. **Fases 4–6:** imagen de cámara con intrínsecos, detección AprilTag, PnP y
-   corrección de localización.
-5. **Fases 7–10:** layout de Foxglove, métricas, experimentos en sala,
+4. **Fase 4:** implementada en código. Falta validar `camera-access`, la
+   orientación de la imagen, la vista previa y el `hello` en un celular.
+5. **Fases 5–6:** detección AprilTag, PnP y corrección de localización.
+6. **Fases 7–10:** layout de Foxglove, métricas, experimentos en sala,
    documentación e informe final.
 
 ## Limitaciones conocidas
@@ -285,6 +318,11 @@ escritorio; la telemetría real del celular sigue pendiente.
   un celular ARCore.
 - La pose cruda de `/ar.html` no se probó todavía en un dispositivo real; el
   criterio de aceptación de la Fase 3 sigue pendiente.
+- La captura de cámara y los intrínsecos de la Fase 4 están implementados, pero
+  no se validaron en un celular: faltan la orientación de la imagen, la vista
+  previa a ≥10 Hz y la recepción del `hello` con intrínsecos.
+- `camera-access` es opcional. Si el dispositivo no lo habilita, `/ar.html`
+  sigue funcionando solo con VIO y la Fase 4 queda bloqueada.
 - Foxglove Studio se validó en escritorio con la versión 3.5.0; falta la
   telemetría real del celular y una captura de evidencia.
 - El mapa actual es sintético; no se midió una sala real.

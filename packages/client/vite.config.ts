@@ -33,6 +33,13 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      // Calibración opcional de cámara. Si el archivo no existe, el servidor
+      // responde 404 y el cliente deriva los intrínsecos del XRView.
+      '/config/camera_intrinsics.json': {
+        target: 'https://127.0.0.1:8443',
+        changeOrigin: true,
+        secure: false,
+      },
       // Permite que el cliente use el mismo origen también en desarrollo:
       // wss://IP:5173/ingest se reenvía al relay HTTPS de :8443.
       '/ingest': {

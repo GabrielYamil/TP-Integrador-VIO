@@ -1,0 +1,11 @@
+{
+  "image_size": [1920, 1080],
+  "intrinsics": {
+    "fx": 1536.0,
+    "fy": 1536.0,
+    "cx": 960.0,
+    "cy": 540.0
+  },
+  "reprojection_error_px": 0.42,
+  "note": "Ejemplo. Reemplazar por una calibración real con tablero y copiar como config/camera_intrinsics.json."
+}

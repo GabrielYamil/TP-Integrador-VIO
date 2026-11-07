@@ -3,17 +3,19 @@
 Última actualización: **2026-11-07**.
 
 Alcance de este informe: **Fase 0 (entorno, HTTPS y prueba AR)**, **Fase 1
-(matemática SE(3) y convenciones)**, **Fase 2 (relay y Foxglove)** y **Fase 3
-(cliente WebXR y pose cruda)**. Las fases 4 a 10 todavía no se implementaron.
+(matemática SE(3) y convenciones)**, **Fase 2 (relay y Foxglove)**, **Fase 3
+(cliente WebXR y pose cruda)** y **Fase 4 (imagen de cámara e intrínsecos)**. Las
+fases 5 a 10 todavía no se implementaron.
 
 ## 1. Resumen
 
-| Fase                          | Estado           | Observación                                                                                                              |
-| ----------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| 0 — entorno y HTTPS           | **Parcial**      | El circuito PC está verificado. La aceptación depende de la prueba en celular real, que sigue pendiente.                 |
-| 1 — matemática y convenciones | **Completada**   | 33 tests automáticos pasan, incluido el caso sintético de corrección.                                                    |
-| 2 — relay y Foxglove          | **Completada**   | 13 tests del servidor. Foxglove Studio 3.5.0 el 2026-11-05 y relay HTTPS el 2026-11-06. Falta la telemetría del celular. |
-| 3 — cliente AR y pose cruda   | **Implementada** | 7 tests del cliente. Falta validar en celular la fluidez, el tracking y la orientación de los ejes.                      |
+| Fase                          | Estado           | Observación                                                                                                      |
+| ----------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------- |
+| 0 — entorno y HTTPS           | **Parcial**      | El circuito PC está verificado. La aceptación depende de la prueba en celular real, que sigue pendiente.         |
+| 1 — matemática y convenciones | **Completada**   | El paquete `shared` acumula 44 tests, incluido el caso sintético de corrección.                                  |
+| 2 — relay y Foxglove          | **Completada**   | 13 tests originales del servidor (16 actuales). Foxglove Studio 3.5.0 el 2026-11-05 y relay HTTPS el 2026-11-06. |
+| 3 — cliente AR y pose cruda   | **Implementada** | 7 tests originales del cliente (25 actuales). Falta validar en celular la fluidez, el tracking y los ejes.       |
+| 4 — cámara e intrínsecos      | **Implementada** | Captura, gris, preview, intrínsecos y `hello`. Endpoint verificado en PC; falta la validación en celular.        |
 
 La Fase 0 no se declara cerrada hasta que Chrome Android acepte el certificado
 e inicie una sesión `immersive-ar` con tracking. En esta máquina no hay un
@@ -34,30 +36,48 @@ y descarte de mensajes viejos. La validación en celular no se pudo ejecutar:
 no hay un dispositivo ARCore disponible, así que el criterio de aceptación de
 la fase sigue **pendiente**.
 
+La Fase 4 se implementó a pedido explícito, sin esperar la aceptación de la
+Fase 3. El cliente captura la textura de `camera-access`, la reduce en GPU a un
+framebuffer de 640 px de lado máximo, la convierte a gris con origen arriba a
+la izquierda y muestra una vista previa. Los intrínsecos se derivan de
+`XRView.projectionMatrix` o se cargan de `config/camera_intrinsics.json`, y se
+envían en `hello` al abrir la conexión y después de cada reconexión. El
+2026-11-07 se verificaron en la PC los tests y el endpoint de calibración
+(404 sin archivo, 200 con el ejemplo). La captura real, la orientación de la
+imagen y la estabilidad de los intrínsecos **no se validaron en celular**, así
+que el criterio de aceptación sigue **pendiente**.
+
 ## 2. Verificaciones automáticas
 
 Ejecutadas desde la raíz del repositorio:
 
-| Comando             | Resultado                                                            |
-| ------------------- | -------------------------------------------------------------------- |
-| `pnpm typecheck`    | OK en `shared`, `client` y `server`.                                 |
-| `pnpm test`         | 8 archivos, **53 tests pasaron** (33 shared + 7 client + 13 server). |
-| `pnpm lint`         | OK, sin errores.                                                     |
-| `pnpm build`        | OK. El cliente multipágina se generó en `packages/client/dist`.      |
-| `pnpm format:check` | OK después de aplicar Prettier.                                      |
+| Comando             | Resultado                                                              |
+| ------------------- | ---------------------------------------------------------------------- |
+| `pnpm typecheck`    | OK en `shared`, `client` y `server`.                                   |
+| `pnpm test`         | 15 archivos, **85 tests pasaron** (44 shared + 25 client + 16 server). |
+| `pnpm lint`         | OK, sin errores.                                                       |
+| `pnpm build`        | OK. El cliente multipágina se generó en `packages/client/dist`.        |
+| `pnpm format:check` | OK después de aplicar Prettier.                                        |
 
 ### Detalle de los tests
 
-| Archivo                                        | Tests | Cobertura principal                                                                         |
-| ---------------------------------------------- | ----: | ------------------------------------------------------------------------------------------- |
-| `packages/shared/src/math/se3.test.ts`         |    12 | Composición, inversa, rotaciones de 90°, round-trip WebXR, corrección sintética con deriva. |
-| `packages/shared/src/conventions/axes.test.ts` |     6 | `C_WEBXR_CV`, `C_ROS_WEBXR`, `C_ROS_CV` y sus inversas.                                     |
-| `packages/shared/src/markers/map.test.ts`      |     9 | Esquema del mapa, IDs duplicados, `markerPoseOnWall` y geometría del mapa demo.             |
-| `packages/shared/src/messages/schemas.test.ts` |     6 | Validación de mensajes `pose`, `marker`, `correction` y `hello`.                            |
-| `packages/client/src/ws-client.test.ts`        |     7 | Envío, buffer, descarte por límite/edad, backoff y cierre del cliente WebSocket.            |
-| `packages/server/src/foxglove.test.ts`         |     4 | Conversión ms→ns, canales JSON Schema, TF, escena, métricas y snapshot al suscribirse.      |
-| `packages/server/src/ingest.test.ts`           |     2 | Mensajes válidos, inválidos y binarios; rechazo de otra ruta WebSocket.                     |
-| `packages/server/src/sim-client.test.ts`       |     7 | Argumentos, trayectorias círculo/cuadrado, deriva y mensaje `hello`.                        |
+| Archivo                                                 | Tests | Cobertura principal                                                                         |
+| ------------------------------------------------------- | ----: | ------------------------------------------------------------------------------------------- |
+| `packages/shared/src/math/se3.test.ts`                  |    12 | Composición, inversa, rotaciones de 90°, round-trip WebXR, corrección sintética con deriva. |
+| `packages/shared/src/conventions/axes.test.ts`          |     6 | `C_WEBXR_CV`, `C_ROS_WEBXR`, `C_ROS_CV` y sus inversas.                                     |
+| `packages/shared/src/markers/map.test.ts`               |     9 | Esquema del mapa, IDs duplicados, `markerPoseOnWall` y geometría del mapa demo.             |
+| `packages/shared/src/messages/schemas.test.ts`          |     6 | Validación de mensajes `pose`, `marker`, `correction` y `hello`.                            |
+| `packages/shared/src/camera/intrinsics.test.ts`         |     8 | Derivación de intrínsecos, frustum asimétrico, origen top-left, escalado y errores.         |
+| `packages/shared/src/camera/calibration.test.ts`        |     3 | Esquema de calibración y escalado a la imagen procesada.                                    |
+| `packages/client/src/ws-client.test.ts`                 |     7 | Envío, buffer, descarte por límite/edad, backoff y cierre del cliente WebSocket.            |
+| `packages/client/src/client-config.test.ts`             |     5 | Defaults, overrides `hz`/`camhz`/`camw`/`preview` y URL del relay.                          |
+| `packages/client/src/camera-capture.test.ts`            |     5 | Tamaño de captura, relación de aspecto y ausencia de `XRWebGLBinding`.                      |
+| `packages/client/src/camera-calibration.test.ts`        |     4 | Carga, 404, error HTTP/red y validación del esquema de calibración.                         |
+| `packages/client/src/device-label.test.ts`              |     4 | Extracción del modelo de Android y recorte a 256 caracteres.                                |
+| `packages/server/src/foxglove.test.ts`                  |     4 | Conversión ms→ns, canales JSON Schema, TF, escena, métricas y snapshot al suscribirse.      |
+| `packages/server/src/ingest.test.ts`                    |     2 | Mensajes válidos, inválidos y binarios; rechazo de otra ruta WebSocket.                     |
+| `packages/server/src/sim-client.test.ts`                |     7 | Argumentos, trayectorias círculo/cuadrado, deriva y mensaje `hello`.                        |
+| `packages/server/src/camera-calibration-loader.test.ts` |     3 | Archivo ausente, calibración válida, JSON inválido y esquema inválido.                      |
 
 El caso sintético de corrección construye una observación de un marcador,
 introduce una deriva conocida en `T_odom_cam` y comprueba que
@@ -74,6 +94,13 @@ Los tests de `IngestClient` usan un WebSocket falso y timers simulados. Cubren
 el envío directo, el buffer hasta la apertura, el descarte del mensaje más viejo
 al superar el límite, el descarte por antigüedad, el backoff exponencial con
 jitter, el cierre definitivo y el fallo del constructor de WebSocket.
+
+Los tests de la Fase 4 cubren la matemática de intrínsecos con un frustum
+simétrico y otro asimétrico, el reflejo de `cy` al origen top-left, el escalado
+a la resolución procesada, el esquema de la calibración opcional, el tamaño de
+captura con relación de aspecto (incluida una imagen vertical), la carga y los
+errores del endpoint de calibración, la etiqueta del dispositivo y el
+`connectionId` que dispara el reenvío de `hello`.
 
 ## 3. Verificación del servidor HTTPS
 
@@ -244,7 +271,90 @@ fluida en Foxglove, con los ejes correctos— **no se puede verificar sin un
 dispositivo ARCore**. Queda pendiente y no se declara cumplido. Las pruebas
 automáticas y de relay solo cubren el transporte y el formato del mensaje.
 
-## 6. Herramientas y artefactos
+## 6. Verificación de la Fase 4
+
+### 6.1. Alcance implementado
+
+- `packages/shared/src/camera/intrinsics.ts`: derivación de `fx`, `fy`, `cx`,
+  `cy`, `skew` desde `XRView.projectionMatrix`; origen configurable
+  `bottom-left`/`top-left`; escalado por ejes y a un tamaño destino.
+- `packages/shared/src/camera/calibration.ts`: esquema zod de
+  `config/camera_intrinsics.json`, validación y escalado a la imagen procesada
+  sin reflejar `cy`.
+- `packages/client/src/camera-capture.ts`: binding de `XRWebGLBinding`,
+  framebuffer propio, shader que invierte `v`, `readPixels` RGBA, conversión a
+  gris top-left, cálculo de intrínsecos y buffer reutilizable.
+- `packages/client/src/camera-calibration.ts`: descarga y validación de la
+  calibración; distingue `ok`, `missing` (404), `invalid` y `error`.
+- `packages/client/src/device-label.ts`: extracción del modelo de Android para
+  `hello`, con recorte a 256 caracteres.
+- `packages/client/src/ar.ts`: integración de la captura a `cameraHz`, vista
+  previa, overlay de cámara/intrínsecos/`hello`, degradación a solo VIO cuando
+  `camera-access` o `XRWebGLBinding` no están disponibles, y limpieza de la
+  sesión.
+- `packages/client/src/client-config.ts`: `maxDimension` (640 px), `captureHz`
+  (10 Hz), `preview` y `calibrationUrl`, con overrides `?camhz=`, `?camw=` y
+  `?preview=`.
+- `packages/server/src/camera-calibration-loader.ts` y `index.ts`: carga
+  opcional al arrancar, validación zod, endpoint
+  `GET /config/camera_intrinsics.json` y campos en `/health`.
+- `packages/client/vite.config.ts`: proxy de `/config/camera_intrinsics.json`
+  hacia el servidor HTTPS.
+
+### 6.2. Verificación en la PC
+
+El **2026-11-07** se ejecutaron los checks del repositorio:
+
+| Comando             | Resultado                                            |
+| ------------------- | ---------------------------------------------------- |
+| `pnpm typecheck`    | OK en los tres paquetes.                             |
+| `pnpm test`         | 15 archivos, 85 tests pasan.                         |
+| `pnpm lint`         | OK.                                                  |
+| `pnpm build`        | OK; `/ar.html` y los assets de la Fase 4 se generan. |
+| `pnpm format:check` | OK.                                                  |
+
+También se levantó el servidor con `pnpm start` y se consultó el endpoint:
+
+| Prueba                                           | Resultado                                                |
+| ------------------------------------------------ | -------------------------------------------------------- |
+| `GET /config/camera_intrinsics.json` sin archivo | HTTP **404**, `{"error":"camera_intrinsics_not_found"}`. |
+| `/health` sin archivo                            | `camera_intrinsics.available: false`, `error: null`.     |
+| Endpoint con `camera_intrinsics.example.json`    | HTTP **200** con `image_size` e `intrinsics`.            |
+| `/health` con archivo                            | `camera_intrinsics.available: true`, `error: null`.      |
+| Procesos al terminar                             | Sin listeners en 8443 ni 8765.                           |
+
+La calibración de ejemplo se copió temporalmente a
+`config/camera_intrinsics.json` y se eliminó al terminar; el archivo local sigue
+ignorado por git.
+
+### 6.3. Cobertura automática de la Fase 4
+
+- `intrinsics.test.ts`: frustum simétrico, frustum asimétrico con `skew`,
+  viewport con offset, reflejo de `cy`, escalado y rechazo de matrices o
+  viewports inválidos.
+- `calibration.test.ts`: esquema estricto, campos opcionales y escalado a
+  `640×360`.
+- `camera-capture.test.ts`: reducción preservando aspecto, imágenes verticales,
+  dimensiones mínimas y ausencia de `XRWebGLBinding`.
+- `camera-calibration.test.ts`: 200 válido, 404, 503, error de red, JSON
+  inválido y esquema inválido.
+- `device-label.test.ts`: modelo de Android, sufijo `wv`, fallback a Chrome y
+  truncado.
+- `client-config.test.ts`: defaults y overrides de cámara, incluidos los
+  warnings por valores fuera de rango.
+- `camera-calibration-loader.test.ts`: archivo ausente, válido, JSON inválido y
+  esquema inválido.
+
+### 6.4. Criterio de aceptación
+
+El criterio de la Fase 4 —ver la imagen en gris a ≥10 Hz con orientación
+correcta y disponer de intrínsecos utilizables— **no se puede verificar sin un
+celular con `camera-access`**. Queda pendiente. Las pruebas de la PC solo
+demuestran la matemática, el empaquetado, la configuración y el endpoint; no
+demuestran que Chrome Android entregue la textura ni que la orientación sea la
+esperada en un dispositivo concreto.
+
+## 7. Herramientas y artefactos
 
 ### Marcadores
 
@@ -278,7 +388,7 @@ El servidor actual:
 - acepta `--http` para pruebas de escritorio;
 - incluye `pnpm sim` y el cliente móvil `/ar.html` como fuentes de telemetría.
 
-## 7. Verificaciones manuales pendientes
+## 8. Verificaciones manuales pendientes
 
 Las siguientes pruebas no se pueden hacer sin el celular. Quedan registradas
 como pendientes, no como aprobadas. La validación de Foxglove Studio ya se
@@ -302,9 +412,18 @@ registró en la sección 4.3.
       los giros y el movimiento vertical son coherentes.
 - [ ] La pose se ve fluida en Foxglove a una frecuencia cercana a 30 Hz.
 - [ ] `camera-access` se habilita y `getCameraImage` devuelve una textura.
+- [ ] La vista previa en gris se ve a ≥10 Hz y con orientación correcta.
+- [ ] Los intrínsecos del overlay son estables y corresponden a la imagen
+      procesada.
+- [ ] El servidor recibe `hello` (`byType.hello > 0`) con el dispositivo y
+      `image_size` correctos.
+- [ ] Con una calibración propia, `/ar.html` muestra **Fuente: calibración** y
+      los valores escalados.
 - [ ] El modo mock abre la webcam en la PC y la pose simulada responde al
       teclado.
 - [ ] Se guardó el reporte JSON de `/ar-test.html` como evidencia.
+- [x] El endpoint `/config/camera_intrinsics.json` responde 404 sin archivo y
+      200 con una calibración válida (verificado en la PC el 2026-11-07).
 
 ### Cómo registrar el resultado
 
@@ -322,13 +441,22 @@ Para la Fase 3, registrar además el estado del overlay de `/ar.html`, el valor
 de `ingest.messagesValid` en `/health` y una captura de Foxglove con
 `/pose/raw`, `/tf` y la trayectoria cruda.
 
+Para la Fase 4, registrar además:
+
+- tamaño procesado de la imagen y frecuencia de captura del overlay;
+- valores de intrínsecos y fuente (`XRView` o `calibración`);
+- captura de la vista previa en gris, indicando si la orientación es correcta;
+- `byType.hello`, `ingest.devices` y el `image_size` recibido en `/health`;
+- si se usó `config/camera_intrinsics.json`, su `image_size` y el valor de
+  `camera_intrinsics.available` en `/health`.
+
 La prueba de Foxglove del 2026-11-05 quedó registrada en la sección 4.3 con la
 versión 3.5.0 y la URL de conexión. Para futuras corridas, agregar una captura
 del panel 3D con las dos trayectorias.
 
 No modificar los resultados automáticos sin volver a ejecutar los comandos.
 
-## 8. Limitaciones conocidas
+## 9. Limitaciones conocidas
 
 1. **Validación móvil bloqueada:** no hay un celular ARCore conectado en el
    entorno de desarrollo actual.
@@ -341,26 +469,33 @@ No modificar los resultados automáticos sin volver a ejecutar los comandos.
 5. **Fase 3:** el cliente y el transporte están implementados y testeados, pero
    la fluidez, el tracking y la orientación de los ejes no se validaron en un
    celular real. El criterio de aceptación sigue pendiente.
-6. **Foxglove Studio:** validado en escritorio con la versión 3.5.0; falta la
+6. **Fase 4:** la captura, la conversión a gris, la calibración y el `hello`
+   están implementados y testeados, pero la textura real, la orientación de la
+   imagen y la estabilidad de los intrínsecos no se validaron en un celular. El
+   criterio de aceptación sigue pendiente.
+7. **Foxglove Studio:** validado en escritorio con la versión 3.5.0; falta la
    telemetría real del celular y una captura de evidencia.
-7. **Relay HTTPS:** validado con `wss://localhost:8443/ingest` y la CA de mkcert.
+8. **Relay HTTPS:** validado con `wss://localhost:8443/ingest` y la CA de mkcert.
    Falta repetirlo desde el celular por la IP LAN.
-8. **mkcert:** instalado y con certificados generados; la CA todavía no está
+9. **mkcert:** instalado y con certificados generados; la CA todavía no está
    instalada en Android y las reglas de firewall requieren una consola elevada.
-9. **`@foxglove/ws-protocol` 0.8.0:** está deprecado; se usa igual por la
-   decisión del proyecto y se revisará si aparece un problema de compatibilidad.
+10. **`@foxglove/ws-protocol` 0.8.0:** está deprecado; se usa igual por la
+    decisión del proyecto y se revisará si aparece un problema de compatibilidad.
 
-## 9. Próximo paso
+## 10. Próximo paso
 
 1. Instalar `certs/rootCA.pem` en el celular y crear las reglas de firewall en
    una consola elevada.
 2. Completar el checklist de la Fase 0 cuando haya un celular ARCore.
 3. Validar `/ar.html` en el celular: sesión, tracking, pose en Foxglove, ejes y
    fluidez. Con eso se cierra la Fase 3.
-4. Repetir el relay por la IP LAN durante la integración del celular.
-5. Iniciar la Fase 4 (imagen de cámara e intrínsecos) recién cuando la Fase 3
-   esté aceptada.
+4. Validar la Fase 4 en el celular: `camera-access`, `getCameraImage`, vista
+   previa en gris a ≥10 Hz, orientación, intrínsecos y `hello`. Con eso se
+   cierra la Fase 4.
+5. Repetir el relay por la IP LAN durante la integración del celular.
+6. Iniciar la Fase 5 (detección AprilTag) recién cuando las fases 3 y 4 estén
+   aceptadas.
 
-La Fase 2 está cerrada y la Fase 3 está implementada, pero no aceptada hasta
-probarla en un dispositivo real. El proyecto mantiene la regla de cerrar una
-fase antes de iniciar la siguiente.
+La Fase 2 está cerrada. Las fases 3 y 4 están implementadas, pero no aceptadas
+hasta probarlas en un dispositivo real. El proyecto mantiene la regla de cerrar
+una fase antes de iniciar la siguiente.
