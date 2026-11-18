@@ -270,7 +270,8 @@ Fecha de referencia: **2026-11-07**.
     ejemplo) y los 85 tests pasan. La captura real, la orientación de la imagen y
     la estabilidad de los intrínsecos **no se validaron en celular**, así que la
     fase no está aceptada.
-- No hay datos de corridas reales, layout de Foxglove ni mapa medido en una
+- **Fase 7:** implementada la estructura del directorio `foxglove/` y la documentación detallada `docs/foxglove.md` con los pasos para armar, exportar (`foxglove/layout.json`) e importar el layout de visualización 3D y métricas en Foxglove Studio.
+- No hay datos de corridas reales ni mapa medido en una
   sala real. La validación móvil de las fases 0, 3 y 4 se retoma cuando haya un
   celular ARCore disponible.
 

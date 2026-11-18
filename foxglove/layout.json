@@ -1,0 +1,77 @@
+{
+  "configById": {
+    "3D!3d_panel_1": {
+      "cameraState": {
+        "perspective": true,
+        "distance": 4.5,
+        "phi": 55,
+        "thetaOffset": 45,
+        "target": [0.5, 0, 0.5]
+      },
+      "followMode": "follow-pose",
+      "followTf": "world",
+      "scene": {
+        "transforms": {
+          "showLabel": true
+        }
+      },
+      "transforms": {
+        "frame:world": {
+          "visible": true
+        }
+      },
+      "topics": {
+        "/markers": {
+          "visible": true
+        },
+        "/tf": {
+          "visible": true
+        }
+      }
+    },
+    "Plot!plot_panel_1": {
+      "title": "Métricas de Corrección y Desempeño",
+      "paths": [
+        {
+          "value": "/metrics.last_correction.delta_p_m",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        },
+        {
+          "value": "/metrics.last_correction.delta_angle_rad",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        },
+        {
+          "value": "/metrics.fps",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating"
+    },
+    "RawMessages!raw_messages_panel_1": {
+      "topicPath": "/metrics",
+      "diffEnabled": false,
+      "diffTopicPath": "",
+      "diffMethod": "custom"
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "linkedGlobalVariables": [],
+  "layout": {
+    "direction": "row",
+    "first": "3D!3d_panel_1",
+    "second": {
+      "direction": "column",
+      "first": "Plot!plot_panel_1",
+      "second": "RawMessages!raw_messages_panel_1",
+      "splitPercentage": 50
+    },
+    "splitPercentage": 65
+  }
+}
