@@ -33,6 +33,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      // Mapa de marcadores de la Fase 6.
+      '/config/marker_map.json': {
+        target: 'https://127.0.0.1:8443',
+        changeOrigin: true,
+        secure: false,
+      },
       // Calibración opcional de cámara. Si el archivo no existe, el servidor
       // responde 404 y el cliente deriva los intrínsecos del XRView.
       '/config/camera_intrinsics.json': {

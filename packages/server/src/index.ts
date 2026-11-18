@@ -128,6 +128,12 @@ async function main(): Promise<void> {
     });
   });
 
+  app.get('/config/marker_map.json', (_request, response) => {
+    response.setHeader('Cache-Control', 'no-store');
+    response.setHeader('Access-Control-Allow-Origin', '*');
+    response.json(markerMap);
+  });
+
   app.get('/config/camera_intrinsics.json', (_request, response) => {
     response.setHeader('Cache-Control', 'no-store');
     response.setHeader('Access-Control-Allow-Origin', '*');
