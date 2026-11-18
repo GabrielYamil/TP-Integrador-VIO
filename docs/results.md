@@ -1,21 +1,23 @@
 # Resultados y estado de validación
 
-Última actualización: **2026-11-07**.
+Última actualización: **2026-11-18**.
 
 Alcance de este informe: **Fase 0 (entorno, HTTPS y prueba AR)**, **Fase 1
 (matemática SE(3) y convenciones)**, **Fase 2 (relay y Foxglove)**, **Fase 3
-(cliente WebXR y pose cruda)** y **Fase 4 (imagen de cámara e intrínsecos)**. Las
-fases 5 a 10 todavía no se implementaron.
+(cliente WebXR y pose cruda)**, **Fase 4 (imagen de cámara e intrínsecos)** y
+**Fase 5 (detección de marcadores y PnP)**. Las fases 6 a 10 todavía no se
+implementaron.
 
 ## 1. Resumen
 
-| Fase                          | Estado           | Observación                                                                                                      |
-| ----------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------- |
-| 0 — entorno y HTTPS           | **Parcial**      | El circuito PC está verificado. La aceptación depende de la prueba en celular real, que sigue pendiente.         |
-| 1 — matemática y convenciones | **Completada**   | El paquete `shared` acumula 44 tests, incluido el caso sintético de corrección.                                  |
-| 2 — relay y Foxglove          | **Completada**   | 13 tests originales del servidor (16 actuales). Foxglove Studio 3.5.0 el 2026-11-05 y relay HTTPS el 2026-11-06. |
-| 3 — cliente AR y pose cruda   | **Implementada** | 7 tests originales del cliente (25 actuales). Falta validar en celular la fluidez, el tracking y los ejes.       |
-| 4 — cámara e intrínsecos      | **Implementada** | Captura, gris, preview, intrínsecos y `hello`. Endpoint verificado en PC; falta la validación en celular.        |
+| Fase                          | Estado           | Observación                                                                                                         |
+| ----------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------- |
+| 0 — entorno y HTTPS           | **Parcial**      | El circuito PC está verificado. La aceptación depende de la prueba en celular real, que sigue pendiente.            |
+| 1 — matemática y convenciones | **Completada**   | El paquete `shared` acumula 44 tests, incluido el caso sintético de corrección.                                     |
+| 2 — relay y Foxglove          | **Completada**   | 16 tests del servidor. Foxglove Studio 3.5.0 el 2026-11-05 y relay HTTPS el 2026-11-06.                             |
+| 3 — cliente AR y pose cruda   | **Implementada** | 29 tests en el cliente. Falta validar en celular la fluidez, el tracking y los ejes.                                |
+| 4 — cámara e intrínsecos      | **Implementada** | Captura, gris, preview, intrínsecos y `hello`. Endpoint verificado en PC; falta la validación en celular.           |
+| 5 — detección de marcadores   | **Implementada** | Web Worker con OpenCV.js (AprilTag 36h11 + PnP IPPE Square), transferables zero-copy, debug 3D y mensajes `marker`. |
 
 La Fase 0 no se declara cerrada hasta que Chrome Android acepte el certificado
 e inicie una sesión `immersive-ar` con tracking. En esta máquina no hay un
@@ -54,7 +56,7 @@ Ejecutadas desde la raíz del repositorio:
 | Comando             | Resultado                                                              |
 | ------------------- | ---------------------------------------------------------------------- |
 | `pnpm typecheck`    | OK en `shared`, `client` y `server`.                                   |
-| `pnpm test`         | 15 archivos, **85 tests pasaron** (44 shared + 25 client + 16 server). |
+| `pnpm test`         | 17 archivos, **89 tests pasaron** (44 shared + 29 client + 16 server). |
 | `pnpm lint`         | OK, sin errores.                                                       |
 | `pnpm build`        | OK. El cliente multipágina se generó en `packages/client/dist`.        |
 | `pnpm format:check` | OK después de aplicar Prettier.                                        |
@@ -74,6 +76,8 @@ Ejecutadas desde la raíz del repositorio:
 | `packages/client/src/camera-capture.test.ts`            |     5 | Tamaño de captura, relación de aspecto y ausencia de `XRWebGLBinding`.                      |
 | `packages/client/src/camera-calibration.test.ts`        |     4 | Carga, 404, error HTTP/red y validación del esquema de calibración.                         |
 | `packages/client/src/device-label.test.ts`              |     4 | Extracción del modelo de Android y recorte a 256 caracteres.                                |
+| `packages/client/src/marker-detector.test.ts`          |     2 | Detección AprilTag, instanciación ArucoDetector, solvePnP y filtros de error.               |
+| `packages/client/src/debug-overlay.test.ts`             |     2 | Proyección de puntos 3D a 2D y renderizado de contornos y ejes 3D en overlay canvas.         |
 | `packages/server/src/foxglove.test.ts`                  |     4 | Conversión ms→ns, canales JSON Schema, TF, escena, métricas y snapshot al suscribirse.      |
 | `packages/server/src/ingest.test.ts`                    |     2 | Mensajes válidos, inválidos y binarios; rechazo de otra ruta WebSocket.                     |
 | `packages/server/src/sim-client.test.ts`                |     7 | Argumentos, trayectorias círculo/cuadrado, deriva y mensaje `hello`.                        |
