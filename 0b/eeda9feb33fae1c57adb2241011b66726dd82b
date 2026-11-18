@@ -1,0 +1,50 @@
+packages/client/package.json
+  h_0382e731b45a27 14
+packages/client/src/marker-detector.ts
+  h_0382e731b45a27 1-247
+packages/client/src/debug-overlay.test.ts
+  h_0382e731b45a27 1-79
+eslint.config.js
+  s_fbdc8da9bd46db::t_c7bd52b4aced01 13-14
+packages/client/src/worker-pool.ts
+  h_0382e731b45a27 1-50
+docs/results.md
+  h_0382e731b45a27 3,7-8,14,17-20,59,79-80
+  h_0382e731b45a27 9,13,15-16
+packages/client/src/worker-protocol.ts
+  s_fbdc8da9bd46db::t_659296877e360c 1-50
+packages/client/src/debug-overlay.ts
+  h_0382e731b45a27 1-117
+packages/client/src/ar.ts
+  h_0382e731b45a27 32,35,127-212,517-519,605,961
+packages/client/src/marker-detector.test.ts
+  h_0382e731b45a27 1-125
+README.md
+  h_0382e731b45a27 20-21,53-62,88-89,210,212,229,306-307,321-324,336-338,340
+  h_0382e731b45a27 90,209,211,213-215,325
+packages/client/src/marker-worker.ts
+  h_0382e731b45a27 1-110
+pnpm-lock.yaml
+  h_0382e731b45a27 19,28,32-34,53,62,68,90,106,493-495,1585,1587,1592,1595,1608,1611,1649,1651,1756-1757,1816,1819,1821-1822,1824,1832,1836,1838-1839,1844,1848,1862,1865-1868,1876,1878,1882,1891,1893,1896-1897,1983,1987,2076,2079-2080,2156,2158,2160,2163,2173,2223,2226,2231,2236,2247-2249,2270,2272,2555,2557,2573,2575,2589,2594,2709,2711-2715,2732,2735,2766,2777,2789
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0beeda9feb33fae1c57adb2241011b66726dd82b",
+  "prompts": {},
+  "humans": {
+    "h_0382e731b45a27": {
+      "author": "Facundo Carballo <carballofacundo70@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_fbdc8da9bd46db": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "4d8f23cf-05e1-43cc-a48c-bc322f8afe2b",
+        "model": "gemini-3.5-flash"
+      },
+      "human_author": "Facundo Carballo <carballofacundo70@gmail.com>"
+    }
+  }
+}
