@@ -1,0 +1,38 @@
+foxglove/layout.json
+  s_86aac97c668aba::t_ae431b3731dd0a 1-77
+README.md
+  s_77b59f0e258372::t_28bb5b4669baae 23
+  s_77b59f0e258372::t_3ea46bdf60ea6e 22
+AGENTS.md
+  s_77b59f0e258372::t_90517885e9d52f 273-274
+docs/foxglove.md
+  s_77b59f0e258372::t_3ea46bdf60ea6e 14,37,46,54,63
+  s_86aac97c668aba::t_d54ebcd7399d8c 66-90
+  s_77b59f0e258372::t_9e1e076f804b70 1-13,15-36,38-45,47-53,55-62,64-65,91-112
+foxglove/README.md
+  s_77b59f0e258372::t_b4d021f9ae13c2 1-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "09677df3125a9f3161c1aa8fe02e22654c2e50e1",
+  "prompts": {},
+  "sessions": {
+    "s_77b59f0e258372": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "82123f3f-0aaa-4dfd-9448-daef53b13955",
+        "model": "gemini-3.5-flash"
+      },
+      "human_author": "Facundo Carballo <carballofacundo70@gmail.com>"
+    },
+    "s_86aac97c668aba": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "d118bc6f-1565-425c-b74f-d0c5685cba6a",
+        "model": "gemini-3.5-flash"
+      },
+      "human_author": "Facundo Carballo <carballofacundo70@gmail.com>"
+    }
+  }
+}
