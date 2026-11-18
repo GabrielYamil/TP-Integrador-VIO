@@ -19,7 +19,8 @@ documentación y la interfaz están en español; el código y los tests en ingl�
 | 4 — cámara e intrínsecos            | Implementada en código. **Validación en celular pendiente.** |
 | 5 — detección de marcadores y PnP   | Implementada en código. **Validación en celular pendiente.** |
 | 6 — corrección de localización      | Implementada en código. **Validación en celular pendiente.** |
-| 7 a 10                              | Pendientes.                                                  |
+| 7 — visualización en Foxglove       | Implementada (Estructura y guía de layout).                  |
+| 8 a 10                              | Pendientes.                                                  |
 
 La Fase 0 incluye el servidor HTTPS, el script de certificados, las páginas de
 diagnóstico WebXR y el modo mock de escritorio. Los certificados de mkcert se
