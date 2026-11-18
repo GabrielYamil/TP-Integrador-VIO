@@ -17,7 +17,8 @@ documentación y la interfaz están en español; el código y los tests en ingl�
 | 2 — relay y servidor Foxglove       | Completada. Validada en Foxglove Studio 3.5.0.               |
 | 3 — cliente WebXR y pose cruda      | Implementada en código. **Validación en celular pendiente.** |
 | 4 — cámara e intrínsecos            | Implementada en código. **Validación en celular pendiente.** |
-| 5 a 10                              | Pendientes.                                                  |
+| 5 — detección de marcadores y PnP   | Implementada en código. **Validación en celular pendiente.** |
+| 6 a 10                              | Pendientes.                                                  |
 
 La Fase 0 incluye el servidor HTTPS, el script de certificados, las páginas de
 diagnóstico WebXR y el modo mock de escritorio. Los certificados de mkcert se
@@ -49,6 +50,16 @@ servidor expone `GET /config/camera_intrinsics.json` (404 si no hay archivo).
 La captura real y la orientación de la imagen todavía no se validaron en un
 celular.
 
+La Fase 5 agrega la detección de marcadores AprilTag 36h11 y la estimación de
+pose PnP (`T_cam_marker`) mediante OpenCV.js (`@techstark/opencv-js`) en un Web
+Worker (`marker-worker.ts`) sin bloquear el bucle de renderizado WebXR. La imagen
+en escala de grises se transfiere al worker mediante `Transferable` (Zero-Copy)
+usando un pool de buffers. La detección ejecuta `solvePnP` (con `SOLVEPNP_IPPE_SQUARE`),
+calcula el error de reproyección (`≤ 5.0 px`) y transmite los mensajes `marker` por
+WebSocket al relay. Incluye overlay de depuración 2D/3D (`debug-overlay.ts`) que
+dibuja el contorno del marcador, su ID, error y los ejes 3D proyectados (X=rojo,
+Y=verde, Z=azul).
+
 ## Arquitectura
 
 ```text
@@ -74,10 +85,9 @@ PC: servidor Node.js
 
 En las fases actuales existen el navegador, el servidor HTTPS, el relay
 `/ingest`, el servidor Foxglove, la matemática de poses, el mapa demo, el
-simulador y el cliente `/ar.html`, que envía la pose cruda de WebXR y, si
-`camera-access` está disponible, la imagen en gris con sus intrínsecos. La
-detección y la corrección llegan en las fases 5 y 6; hasta entonces, la pose
-corregida se deriva con `T_WORLD_ODOM_INITIAL`.
+simulador, el cliente `/ar.html` y el Web Worker de detección de marcadores
+con OpenCV.js (Fase 5). La corrección de deriva llega en la Fase 6; hasta
+entonces, la pose corregida se deriva con `T_WORLD_ODOM_INITIAL`.
 
 ## Estructura
 
@@ -196,13 +206,13 @@ simulada en la convención de WebXR. No valida ARCore ni `camera-access`.
 
 ## Páginas
 
-| Ruta            | Descripción                                                           |
-| --------------- | --------------------------------------------------------------------- |
-| `/`             | Estado del entorno, enlaces y verificación del servidor.              |
-| `/ar.html`      | Cliente de las fases 3 y 4: pose cruda, cámara en gris e intrínsecos. |
-| `/ar-test.html` | Prueba de `immersive-ar`, reference spaces y `camera-access`.         |
-| `/mock.html`    | Webcam y simulación de pose para escritorio.                          |
-| `/health`       | Estado del servidor, la ingesta, la calibración y Foxglove en JSON.   |
+| Ruta            | Descripción                                                                                         |
+| --------------- | --------------------------------------------------------------------------------------------------- |
+| `/`             | Estado del entorno, enlaces y verificación del servidor.                                            |
+| `/ar.html`      | Cliente de las fases 3, 4 y 5: pose cruda, cámara en gris, intrínsecos, detección AprilTag y overlay 3D. |
+| `/ar-test.html` | Prueba de `immersive-ar`, reference spaces y `camera-access`.                                       |
+| `/mock.html`    | Webcam y simulación de pose para escritorio.                                                        |
+| `/health`       | Estado del servidor, la ingesta, la calibración y Foxglove en JSON.                                 |
 
 ## Comandos
 
@@ -216,7 +226,7 @@ simulada en la convención de WebXR. No valida ARCore ni `camera-access`.
 | `pnpm sim`                          | Simulador de cliente contra `/ingest`.                        |
 | `pnpm preview`                      | `pnpm build` seguido de `pnpm start`.                         |
 | `pnpm typecheck`                    | TypeScript estricto en todos los paquetes.                    |
-| `pnpm test`                         | Vitest. En el estado actual: 15 archivos, 85 tests.           |
+| `pnpm test`                         | Vitest. En el estado actual: 17 archivos, 89 tests.           |
 | `pnpm lint`                         | ESLint.                                                       |
 | `pnpm format` / `pnpm format:check` | Prettier sobre el repo.                                       |
 | `pnpm cert:setup`                   | Genera certificados mkcert, exporta la CA y abre el firewall. |
@@ -293,8 +303,8 @@ pnpm format:check
 ```
 
 El estado de los tests automáticos y las verificaciones manuales pendientes se
-documenta en [`docs/results.md`](docs/results.md). En el estado actual hay 15
-archivos y 85 tests: 44 de `packages/shared`, 25 de `packages/client` y 16 de
+documenta en [`docs/results.md`](docs/results.md). En el estado actual hay 17
+archivos y 89 tests: 44 de `packages/shared`, 29 de `packages/client` y 16 de
 `packages/server`. La prueba en celular no se puede reemplazar con tests
 unitarios ni con el emulador. La conexión a Foxglove Studio se validó en
 escritorio; la telemetría real del celular sigue pendiente.
@@ -308,9 +318,11 @@ escritorio; la telemetría real del celular sigue pendiente.
    en un celular ARCore.
 4. **Fase 4:** implementada en código. Falta validar `camera-access`, la
    orientación de la imagen, la vista previa y el `hello` en un celular.
-5. **Fases 5–6:** detección AprilTag, PnP y corrección de localización.
-6. **Fases 7–10:** layout de Foxglove, métricas, experimentos en sala,
-   documentación e informe final.
+5. **Fase 5:** implementada en código. Detección AprilTag 36h11 en Web Worker
+   con OpenCV.js, `solvePnP`, overlay de depuración con ejes 3D proyectados y
+   transmisión de mensajes `marker`. Falta validar en celular real.
+6. **Fases 6–10:** corrección de localización con mapa de marcadores, layout de
+   Foxglove, métricas, experimentos en sala, documentación e informe final.
 
 ## Limitaciones conocidas
 
@@ -321,8 +333,11 @@ escritorio; la telemetría real del celular sigue pendiente.
 - La captura de cámara y los intrínsecos de la Fase 4 están implementados, pero
   no se validaron en un celular: faltan la orientación de la imagen, la vista
   previa a ≥10 Hz y la recepción del `hello` con intrínsecos.
+- La detección de marcadores y estimación de pose de la Fase 5 está implementada
+  en código con OpenCV.js, pero la tasa de procesamiento y precisión de PnP en
+  celular real aún no se validaron.
 - `camera-access` es opcional. Si el dispositivo no lo habilita, `/ar.html`
-  sigue funcionando solo con VIO y la Fase 4 queda bloqueada.
+  sigue funcionando solo con VIO y las Fases 4 y 5 quedan bloqueadas.
 - Foxglove Studio se validó en escritorio con la versión 3.5.0; falta la
   telemetría real del celular y una captura de evidencia.
 - El mapa actual es sintético; no se midió una sala real.

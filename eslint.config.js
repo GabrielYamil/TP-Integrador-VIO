@@ -10,6 +10,8 @@ export default tseslint.config(
       'certs/**',
       'markers/**',
       'data/**',
+      '**/.venv/**',
+      '.venv/**',
     ],
   },
   js.configs.recommended,

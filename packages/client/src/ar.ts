@@ -29,8 +29,10 @@ import { fetchCameraCalibration } from './camera-calibration';
 import type { CameraBindingLike, CameraFrame, XRViewWithCamera } from './camera-capture';
 import { CameraFrameGrabber, createCameraBinding } from './camera-capture';
 import { readRuntimeConfig } from './client-config';
+import { drawDebugOverlay } from './debug-overlay';
 import { describeDevice } from './device-label';
 import { byId, formatVector } from './ui';
+import type { MarkerDetectionResult, WorkerResponse } from './worker-protocol';
 import type { IngestConnectionState, IngestStats } from './ws-client';
 import { IngestClient } from './ws-client';
 
@@ -121,6 +123,92 @@ let lastPoseSentMs = -1;
 let nullPoseFrames = 0;
 let lastFrameErrorMs = 0;
 let logLines = 0;
+
+let markerWorker: Worker | null = null;
+const workerBufferPool: ArrayBuffer[] = [];
+let latestDetections: MarkerDetectionResult[] = [];
+
+function initWorker(): void {
+  if (typeof Worker === 'undefined') {
+    return;
+  }
+  try {
+    markerWorker = new Worker(new URL('./marker-worker.ts', import.meta.url), {
+      type: 'module',
+    });
+    markerWorker.onmessage = (event: MessageEvent<WorkerResponse>) => {
+      const data = event.data;
+      if (data.type === 'ready') {
+        log('Web Worker de marcadores (OpenCV.js) listo', 'ok');
+        return;
+      }
+      if (data.type === 'error') {
+        if (data.buffer) {
+          workerBufferPool.push(data.buffer);
+        }
+        log(data.error, 'warn');
+        return;
+      }
+      if (data.type === 'detect_result') {
+        workerBufferPool.push(data.buffer);
+        latestDetections = data.detections;
+        overlayMarkersEl.textContent = String(latestDetections.length);
+
+        const timestampMs = performance.timeOrigin + data.t;
+        for (const det of data.detections) {
+          if (det.reproj_err_px <= 5.0) {
+            ingest.send({
+              type: 'marker',
+              t: timestampMs,
+              id: det.id,
+              T_cam_marker: det.T_cam_marker,
+              reproj_err_px: det.reproj_err_px,
+            });
+          }
+        }
+        updateUi();
+      }
+    };
+  } catch (err) {
+    log(`Error al instanciar el Worker de marcadores: ${errorMessage(err)}`, 'warn');
+  }
+}
+
+function dispatchToDetectorWorker(time: number, captured: CameraFrame): void {
+  if (!markerWorker) {
+    return;
+  }
+
+  const byteLength = captured.gray.byteLength;
+  let buffer: ArrayBuffer | undefined;
+
+  while (workerBufferPool.length > 0) {
+    const candidate = workerBufferPool.pop()!;
+    if (candidate.byteLength === byteLength) {
+      buffer = candidate;
+      break;
+    }
+  }
+
+  if (!buffer) {
+    buffer = new ArrayBuffer(byteLength);
+  }
+
+  const dest = new Uint8Array(buffer);
+  dest.set(captured.gray);
+
+  markerWorker.postMessage(
+    {
+      type: 'detect',
+      t: time,
+      width: captured.width,
+      height: captured.height,
+      intrinsics: captured.intrinsics,
+      buffer,
+    },
+    [buffer],
+  );
+}
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -426,6 +514,9 @@ function drawCameraPreview(frame: CameraFrame): void {
     previewImageData = new ImageData(pixels, frame.width, frame.height);
   }
   previewContext.putImageData(previewImageData, 0, 0);
+  if (latestDetections.length > 0 && cameraIntrinsics) {
+    drawDebugOverlay(previewContext, latestDetections, cameraIntrinsics);
+  }
   cameraPreviewEl.hidden = false;
 }
 
@@ -511,6 +602,7 @@ function maybeCapture(time: number, viewerPose: XRViewerPose): void {
     cameraSkew = captured.skew;
     intrinsicsSource = cameraCalibration ? 'calibration' : 'derived';
     drawCameraPreview(captured);
+    dispatchToDetectorWorker(time, captured);
 
     cameraFrameCount += 1;
     if (lastCameraFpsTime === 0) {
@@ -866,6 +958,7 @@ async function init(): Promise<void> {
     cameraPreviewEl.hidden = true;
   }
   loadCalibration();
+  initWorker();
   ingest.connect();
 
   if (!window.isSecureContext) {
