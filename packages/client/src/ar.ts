@@ -24,13 +24,14 @@ import type {
   PoseMessagePayload,
   TrackingState,
 } from '@vio/shared';
-import { compose, poseFromWebXRMatrix, worldFromOdomInitial } from '@vio/shared';
+import { poseFromWebXRMatrix, safeParseMarkerMap } from '@vio/shared';
 import { fetchCameraCalibration } from './camera-calibration';
 import type { CameraBindingLike, CameraFrame, XRViewWithCamera } from './camera-capture';
 import { CameraFrameGrabber, createCameraBinding } from './camera-capture';
 import { readRuntimeConfig } from './client-config';
 import { drawDebugOverlay } from './debug-overlay';
 import { describeDevice } from './device-label';
+import { LocalizationCorrector } from './localization-corrector';
 import { byId, formatVector } from './ui';
 import type { MarkerDetectionResult, WorkerResponse } from './worker-protocol';
 import type { IngestConnectionState, IngestStats } from './ws-client';
@@ -77,8 +78,20 @@ const overlayIntrinsicsEl = byId<HTMLElement>('overlay-intrinsics');
 const overlayIntrinsicsSourceEl = byId<HTMLElement>('overlay-intrinsics-source');
 const overlayHelloEl = byId<HTMLElement>('overlay-hello');
 const overlayRawPEl = byId<HTMLElement>('overlay-raw-p');
-const overlayWorldPEl = byId<HTMLElement>('overlay-world-p');
+const overlayCorrectedPEl = byId<HTMLElement>('overlay-corrected-p');
+const overlayModeEl = byId<HTMLElement>('overlay-mode');
+const overlayMapStatusEl = byId<HTMLElement>('overlay-map-status');
+const overlayAcceptedCorrectionsEl = byId<HTMLElement>('overlay-accepted-corrections');
+const overlayRejectedOutliersEl = byId<HTMLElement>('overlay-rejected-outliers');
+const overlayDeltaPEl = byId<HTMLElement>('overlay-delta-p');
+const overlayDeltaAngEl = byId<HTMLElement>('overlay-delta-ang');
+const btnModeDirect = byId<HTMLButtonElement>('mode-direct');
+const btnModeSmooth = byId<HTMLButtonElement>('mode-smooth');
+const btnModeOff = byId<HTMLButtonElement>('mode-off');
 const cameraPreviewEl = byId<HTMLCanvasElement>('camera-preview');
+
+const corrector = new LocalizationCorrector({ mode: config.correctionMode });
+let markerMapLoaded = false;
 
 let session: XRSession | null = null;
 let referenceSpace: XRReferenceSpace | null = null;
@@ -164,6 +177,19 @@ function initWorker(): void {
               T_cam_marker: det.T_cam_marker,
               reproj_err_px: det.reproj_err_px,
             });
+
+            if (rawPose) {
+              const result = corrector.processObservation({
+                markerId: det.id,
+                t: timestampMs,
+                T_odom_cam: rawPose,
+                T_cam_marker: det.T_cam_marker,
+                reprojErrPx: det.reproj_err_px,
+              });
+              if (result.accepted && result.message) {
+                ingest.send(result.message);
+              }
+            }
           }
         }
         updateUi();
@@ -411,8 +437,27 @@ function updateUi(): void {
   overlayIntrinsicsSourceEl.textContent = intrinsicsSourceLabel(intrinsicsSource);
   overlayHelloEl.textContent =
     helloCount > 0 ? `${helloCount} enviado(s)` : cameraIntrinsics ? 'pendiente' : 'sin datos';
+
+  const corrStats = corrector.getStats();
+  overlayModeEl.textContent = corrStats.mode;
+  overlayMapStatusEl.textContent = markerMapLoaded ? 'cargado' : 'sin mapa';
+  overlayAcceptedCorrectionsEl.textContent = String(corrStats.acceptedCount);
+  overlayRejectedOutliersEl.textContent = String(corrStats.rejectedCount);
+
   overlayRawPEl.textContent = rawPose ? formatVector(rawPose.p) : '—';
-  overlayWorldPEl.textContent = worldPose ? formatVector(worldPose.p) : '—';
+  overlayCorrectedPEl.textContent = worldPose ? formatVector(worldPose.p) : '—';
+
+  if (corrStats.lastDelta) {
+    overlayDeltaPEl.textContent = `${corrStats.lastDelta.delta_p_m.toFixed(3)} m`;
+    overlayDeltaAngEl.textContent = `${((corrStats.lastDelta.delta_angle_rad * 180) / Math.PI).toFixed(1)}°`;
+  } else {
+    overlayDeltaPEl.textContent = '—';
+    overlayDeltaAngEl.textContent = '—';
+  }
+
+  btnModeDirect.dataset.status = corrStats.mode === 'direct' ? 'ok' : '';
+  btnModeSmooth.dataset.status = corrStats.mode === 'smooth' ? 'ok' : '';
+  btnModeOff.dataset.status = corrStats.mode === 'off' ? 'ok' : '';
 }
 
 const ingest = new IngestClient(config.ingestUrl, {
@@ -639,7 +684,8 @@ function processFrame(time: number, frame: XRFrame): void {
 
     const raw = poseFromWebXRMatrix(viewerPose.transform.matrix);
     rawPose = raw;
-    worldPose = compose(worldFromOdomInitial(), raw);
+    corrector.tick();
+    worldPose = corrector.getCorrectedCameraPose(raw);
 
     const sendIntervalMs = 1000 / config.poseHz;
     // Tolerancia del 10 % para no perder un envío por el jitter del frame.
@@ -651,6 +697,7 @@ function processFrame(time: number, frame: XRFrame): void {
         // milisegundos de época para conservar el reloj del celular.
         t: performance.timeOrigin + time,
         raw,
+        corrected: worldPose,
         tracking: nextTracking,
       };
       ingest.send(message);
@@ -945,6 +992,29 @@ async function stopSession(): Promise<void> {
   }
 }
 
+async function loadMarkerMapAsync(): Promise<void> {
+  try {
+    const response = await fetch(config.markerMapUrl);
+    if (!response.ok) {
+      log(`No se pudo cargar ${config.markerMapUrl} (HTTP ${response.status})`, 'warn');
+      updateUi();
+      return;
+    }
+    const json = await response.json();
+    const parsed = safeParseMarkerMap(json);
+    if (parsed.success) {
+      corrector.setMarkerMap(parsed.data);
+      markerMapLoaded = true;
+      log(`Mapa de marcadores cargado (${parsed.data.markers.length} marcadores)`, 'ok');
+    } else {
+      log(`Error al validar marker_map.json: ${parsed.error.message}`, 'warn');
+    }
+  } catch (err) {
+    log(`Error al cargar el mapa de marcadores: ${errorMessage(err)}`, 'warn');
+  }
+  updateUi();
+}
+
 async function init(): Promise<void> {
   ingestUrlEl.textContent = config.ingestUrl;
   poseHzEl.textContent = String(config.poseHz);
@@ -958,8 +1028,25 @@ async function init(): Promise<void> {
     cameraPreviewEl.hidden = true;
   }
   loadCalibration();
+  void loadMarkerMapAsync();
   initWorker();
   ingest.connect();
+
+  btnModeDirect.addEventListener('click', () => {
+    corrector.setMode('direct');
+    log('Modo de corrección cambiado a Directo (A)', 'info');
+    updateUi();
+  });
+  btnModeSmooth.addEventListener('click', () => {
+    corrector.setMode('smooth');
+    log('Modo de corrección cambiado a Suavizado (B)', 'info');
+    updateUi();
+  });
+  btnModeOff.addEventListener('click', () => {
+    corrector.setMode('off');
+    log('Corrección de mapa desactivada (Off)', 'info');
+    updateUi();
+  });
 
   if (!window.isSecureContext) {
     log('Abrí esta página por HTTPS para que WebXR funcione', 'error');

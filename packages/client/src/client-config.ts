@@ -11,6 +11,8 @@
  * Los límites del buffer y de reconexión viven en `ws-client.ts` porque son
  * parte del transporte, no de la sesión WebXR.
  */
+export type CorrectionMode = 'direct' | 'smooth' | 'off';
+
 export interface CameraConfig {
   /** Lado máximo de la imagen procesada; se conserva la relación de aspecto. */
   maxDimension: number;
@@ -30,6 +32,8 @@ export interface ClientConfig {
   /** Evita que la UI quede en "consultando" si el navegador no responde. */
   supportTimeoutMs: number;
   camera: CameraConfig;
+  correctionMode: CorrectionMode;
+  markerMapUrl: string;
   ingest: {
     maxBufferedMessages: number;
     maxBufferAgeMs: number;
@@ -51,6 +55,8 @@ export const CLIENT_CONFIG: ClientConfig = {
     preview: true,
     calibrationUrl: '/config/camera_intrinsics.json',
   },
+  correctionMode: 'smooth',
+  markerMapUrl: '/config/marker_map.json',
   ingest: {
     maxBufferedMessages: 120,
     maxBufferAgeMs: 3000,
@@ -67,6 +73,8 @@ export interface RuntimeConfig {
   trackingLostFrames: number;
   supportTimeoutMs: number;
   camera: CameraConfig;
+  correctionMode: CorrectionMode;
+  markerMapUrl: string;
   ingestUrl: string;
   warnings: string[];
 }
@@ -145,6 +153,21 @@ export function readRuntimeConfig(
     }
   }
 
+  let correctionMode = CLIENT_CONFIG.correctionMode;
+  const rawMode = params.get('mode');
+  if (rawMode !== null) {
+    const modeLower = rawMode.toLowerCase();
+    if (modeLower === 'direct' || modeLower === 'a') {
+      correctionMode = 'direct';
+    } else if (modeLower === 'smooth' || modeLower === 'b') {
+      correctionMode = 'smooth';
+    } else if (modeLower === 'off' || modeLower === 'none' || modeLower === '0') {
+      correctionMode = 'off';
+    } else {
+      warnings.push(`El parámetro mode="${rawMode}" no es válido; se usa ${correctionMode}.`);
+    }
+  }
+
   return {
     poseHz,
     uiIntervalMs: CLIENT_CONFIG.uiIntervalMs,
@@ -152,6 +175,8 @@ export function readRuntimeConfig(
     trackingLostFrames: CLIENT_CONFIG.trackingLostFrames,
     supportTimeoutMs: CLIENT_CONFIG.supportTimeoutMs,
     camera,
+    correctionMode,
+    markerMapUrl: CLIENT_CONFIG.markerMapUrl,
     ingestUrl,
     warnings,
   };

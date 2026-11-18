@@ -18,7 +18,8 @@ documentación y la interfaz están en español; el código y los tests en ingl�
 | 3 — cliente WebXR y pose cruda      | Implementada en código. **Validación en celular pendiente.** |
 | 4 — cámara e intrínsecos            | Implementada en código. **Validación en celular pendiente.** |
 | 5 — detección de marcadores y PnP   | Implementada en código. **Validación en celular pendiente.** |
-| 6 a 10                              | Pendientes.                                                  |
+| 6 — corrección de localización      | Implementada en código. **Validación en celular pendiente.** |
+| 7 a 10                              | Pendientes.                                                  |
 
 La Fase 0 incluye el servidor HTTPS, el script de certificados, las páginas de
 diagnóstico WebXR y el modo mock de escritorio. Los certificados de mkcert se
@@ -59,6 +60,16 @@ calcula el error de reproyección (`≤ 5.0 px`) y transmite los mensajes `marke
 WebSocket al relay. Incluye overlay de depuración 2D/3D (`debug-overlay.ts`) que
 dibuja el contorno del marcador, su ID, error y los ejes 3D proyectados (X=rojo,
 Y=verde, Z=azul).
+
+La Fase 6 agrega la corrección de localización con mapa conocido de marcadores
+(`LocalizationCorrector`). Descarga `config/marker_map.json` expuesto por el
+servidor y aplica las observaciones PnP para ajustar la transformación `T_world_odom`.
+Admite tres modos de operación: reemplazo directo (Estrategia A), suavizado
+gradual por LERP/SLERP (Estrategia B) y modo desactivado (Off), seleccionables
+mediante controles en la UI o por parámetro de URL (`?mode=direct|smooth|off`).
+Filtra observaciones inestables u outliers (error de reproyección > 5 px, saltos
+de posición > 1,5 m o saltos angulares > 45°) y transmite la pose corregida
+(`corrected`) a ~30 Hz y mensajes de tipo `correction` a Foxglove Studio.
 
 ## Arquitectura
 
@@ -206,13 +217,13 @@ simulada en la convención de WebXR. No valida ARCore ni `camera-access`.
 
 ## Páginas
 
-| Ruta            | Descripción                                                                                         |
-| --------------- | --------------------------------------------------------------------------------------------------- |
-| `/`             | Estado del entorno, enlaces y verificación del servidor.                                            |
-| `/ar.html`      | Cliente de las fases 3, 4 y 5: pose cruda, cámara en gris, intrínsecos, detección AprilTag y overlay 3D. |
-| `/ar-test.html` | Prueba de `immersive-ar`, reference spaces y `camera-access`.                                       |
-| `/mock.html`    | Webcam y simulación de pose para escritorio.                                                        |
-| `/health`       | Estado del servidor, la ingesta, la calibración y Foxglove en JSON.                                 |
+| Ruta            | Descripción                                                                                                                                             |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`             | Estado del entorno, enlaces y verificación del servidor.                                                                                                |
+| `/ar.html`      | Cliente de las fases 3, 4, 5 y 6: pose cruda, pose corregida, cámara en gris, intrínsecos, detección AprilTag, corrección de localización y overlay 3D. |
+| `/ar-test.html` | Prueba de `immersive-ar`, reference spaces y `camera-access`.                                                                                           |
+| `/mock.html`    | Webcam y simulación de pose para escritorio.                                                                                                            |
+| `/health`       | Estado del servidor, la ingesta, la calibración y Foxglove en JSON.                                                                                     |
 
 ## Comandos
 
@@ -226,7 +237,7 @@ simulada en la convención de WebXR. No valida ARCore ni `camera-access`.
 | `pnpm sim`                          | Simulador de cliente contra `/ingest`.                        |
 | `pnpm preview`                      | `pnpm build` seguido de `pnpm start`.                         |
 | `pnpm typecheck`                    | TypeScript estricto en todos los paquetes.                    |
-| `pnpm test`                         | Vitest. En el estado actual: 17 archivos, 89 tests.           |
+| `pnpm test`                         | Vitest. En el estado actual: 18 archivos, 96 tests.           |
 | `pnpm lint`                         | ESLint.                                                       |
 | `pnpm format` / `pnpm format:check` | Prettier sobre el repo.                                       |
 | `pnpm cert:setup`                   | Genera certificados mkcert, exporta la CA y abre el firewall. |
@@ -303,8 +314,8 @@ pnpm format:check
 ```
 
 El estado de los tests automáticos y las verificaciones manuales pendientes se
-documenta en [`docs/results.md`](docs/results.md). En el estado actual hay 17
-archivos y 89 tests: 44 de `packages/shared`, 29 de `packages/client` y 16 de
+documenta en [`docs/results.md`](docs/results.md). En el estado actual hay 18
+archivos y 96 tests: 44 de `packages/shared`, 36 de `packages/client` y 16 de
 `packages/server`. La prueba en celular no se puede reemplazar con tests
 unitarios ni con el emulador. La conexión a Foxglove Studio se validó en
 escritorio; la telemetría real del celular sigue pendiente.
@@ -321,8 +332,10 @@ escritorio; la telemetría real del celular sigue pendiente.
 5. **Fase 5:** implementada en código. Detección AprilTag 36h11 en Web Worker
    con OpenCV.js, `solvePnP`, overlay de depuración con ejes 3D proyectados y
    transmisión de mensajes `marker`. Falta validar en celular real.
-6. **Fases 6–10:** corrección de localización con mapa de marcadores, layout de
-   Foxglove, métricas, experimentos en sala, documentación e informe final.
+6. **Fase 6:** implementada en código. Corrección de localización (`LocalizationCorrector`)
+   con mapa de marcadores, estrategias directa y suavizada, filtrado de outliers,
+   selector de modo en UI y transmisión de pose corregida a Foxglove.
+7. **Fases 7–10:** layout de Foxglove, métricas, experimentos en sala, documentación e informe final.
 
 ## Limitaciones conocidas
 

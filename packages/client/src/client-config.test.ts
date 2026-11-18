@@ -8,19 +8,21 @@ describe('readRuntimeConfig', () => {
     const config = readRuntimeConfig('', TEST_LOCATION);
     expect(config.poseHz).toBe(CLIENT_CONFIG.poseHz);
     expect(config.camera).toEqual(CLIENT_CONFIG.camera);
+    expect(config.correctionMode).toBe('smooth');
     expect(config.warnings).toEqual([]);
     expect(config.ingestUrl).toBe('wss://localhost:5173/ingest');
   });
 
-  it('reads pose, ingest and camera overrides', () => {
+  it('reads pose, ingest, camera and mode overrides', () => {
     const config = readRuntimeConfig(
-      '?hz=15&ingest=wss%3A%2F%2F192.168.1.18%3A8443%2Fingest&camhz=5&camw=480&preview=0',
+      '?hz=15&ingest=wss%3A%2F%2F192.168.1.18%3A8443%2Fingest&camhz=5&camw=480&preview=0&mode=direct',
       TEST_LOCATION,
     );
     expect(config.poseHz).toBe(15);
     expect(config.camera.captureHz).toBe(5);
     expect(config.camera.maxDimension).toBe(480);
     expect(config.camera.preview).toBe(false);
+    expect(config.correctionMode).toBe('direct');
     expect(config.ingestUrl).toBe('wss://192.168.1.18:8443/ingest');
     expect(config.warnings).toEqual([]);
   });
