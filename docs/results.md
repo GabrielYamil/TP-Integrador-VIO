@@ -1,12 +1,13 @@
 # Resultados y estado de validación
 
-Última actualización: **2026-11-18**.
+Última actualización: **2026-11-21**.
 
 Alcance de este informe: **Fase 0 (entorno, HTTPS y prueba AR)**, **Fase 1
 (matemática SE(3) y convenciones)**, **Fase 2 (relay y Foxglove)**, **Fase 3
 (cliente WebXR y pose cruda)**, **Fase 4 (imagen de cámara e intrínsecos)**,
-**Fase 5 (detección de marcadores y PnP)** y **Fase 6 (corrección de localización)**. Las fases 7 a 10 todavía no se
-implementaron.
+**Fase 5 (detección de marcadores y PnP)**, **Fase 6 (corrección de localización)**
+y **Fase 8 (registro de recorridos)**. Las fases 7, 9 y 10 todavía no se
+implementaron completamente.
 
 ## 1. Resumen
 
@@ -19,6 +20,7 @@ implementaron.
 | 4 — cámara e intrínsecos       | **Implementada** | Captura, gris, preview, intrínsecos y `hello`. Endpoint verificado en PC; falta la validación en celular.                               |
 | 5 — detección de marcadores    | **Implementada** | Web Worker con OpenCV.js (AprilTag 36h11 + PnP IPPE Square), transferables zero-copy, debug 3D y mensajes `marker`.                     |
 | 6 — corrección de localización | **Implementada** | Módulo `LocalizationCorrector`, estrategias Directa (A) y Suavizada (B), filtrado de outliers, selector UI/URL y mensajes `correction`. |
+| 8 — registro de recorridos     | **Implementada** | Grabador JSONL opcional con `--record`, cola secuencial, metadatos y cierre controlado. Falta integración de corridas reales.           |
 
 La Fase 0 no se declara cerrada hasta que Chrome Android acepte el certificado
 e inicie una sesión `immersive-ar` con tracking. En esta máquina no hay un
@@ -393,7 +395,50 @@ El servidor actual:
 - acepta `--http` para pruebas de escritorio;
 - incluye `pnpm sim` y el cliente móvil `/ar.html` como fuentes de telemetría.
 
-## 8. Verificaciones manuales pendientes
+## 8. Verificación automática de la Fase 8
+
+La grabación JSONL de la Fase 8 quedó implementada como una extensión opcional
+del servidor. Se activa exclusivamente con `--record` y no modifica el flujo
+del servidor sin esa opción.
+
+El grabador conserva los mensajes validados por Zod, separa el timestamp
+`message.t` del timestamp `context.received_at_ms` y añade
+`server_time_ms` al momento de generación de cada registro. Los metadatos iniciales
+incluyen el servidor, el mapa completo cargado y una copia de la calibración
+validada, si existe.
+
+Cobertura incluida:
+
+- escritura de `run_start`, cuatro tipos de mensajes válidos y `run_end`;
+- conservación separada de los timestamps de cliente y recepción;
+- copia de calibración válida en los metadatos;
+- límite de cola y estado incompleto por overflow;
+- fallo de inicialización sin impedir la creación del servidor.
+- contadores separados `dropped_before_queue` y `dropped_after_queue`;
+- escritura serial y `inFlight` sin contabilización duplicada;
+- publicación atómica de manifiesto y ausencia de manifiesto ante errores;
+- cierre de JSONL confirmado antes de publicar el manifiesto.
+
+El 2026-11-21 se ejecutaron las verificaciones automáticas obligatorias:
+
+| Comando             | Resultado                             |
+| ------------------- | ------------------------------------- |
+| `pnpm typecheck`    | OK en los tres paquetes.              |
+| `pnpm test`         | 105 tests pasaron: 44 + 36 + 25.      |
+| `pnpm lint`         | OK, sin errores.                      |
+| `pnpm build`        | OK. El cliente multipágina se generó. |
+| `pnpm format:check` | OK después de aplicar Prettier.       |
+
+El 2026-11-21 se hizo una integración sintética con el servidor HTTP local:
+el simulador envió `hello` y 37 mensajes `pose` durante una corrida corta de
+2 segundos con la trayectoria circular y deriva. El archivo JSONL mostró
+`run_start`, los mensajes íntegros y timestamps separados de cliente y servidor.
+Al terminar el proceso por el harness de herramientas no se obtuvo `run_end`,
+como corresponde a una terminación no controlada de esa prueba. Tampoco se
+probó la recuperación ante un fallo real de disco ni se declaró cierre físico
+ni experimental de la Fase 8.
+
+## 9. Verificaciones manuales pendientes
 
 Las siguientes pruebas no se pueden hacer sin el celular. Quedan registradas
 como pendientes, no como aprobadas. La validación de Foxglove Studio ya se
@@ -461,7 +506,7 @@ del panel 3D con las dos trayectorias.
 
 No modificar los resultados automáticos sin volver a ejecutar los comandos.
 
-## 9. Limitaciones conocidas
+## 10. Limitaciones conocidas
 
 1. **Validación móvil bloqueada:** no hay un celular ARCore conectado en el
    entorno de desarrollo actual.
@@ -487,7 +532,7 @@ No modificar los resultados automáticos sin volver a ejecutar los comandos.
 10. **`@foxglove/ws-protocol` 0.8.0:** está deprecado; se usa igual por la
     decisión del proyecto y se revisará si aparece un problema de compatibilidad.
 
-## 10. Próximo paso
+## 11. Próximo paso
 
 1. Instalar `certs/rootCA.pem` en el celular y crear las reglas de firewall en
    una consola elevada.

@@ -23,6 +23,7 @@ import { FoxgloveGateway } from './foxglove';
 import { IngestServer } from './ingest';
 import { loadMarkerMap } from './marker-map-loader';
 import { createLogger, parseLogLevel } from './logging';
+import { RunRecorder } from './run-recorder';
 
 interface PackageJson {
   version?: string;
@@ -42,6 +43,7 @@ const defaultCameraCalibrationPath = join(repoRoot, 'config', 'camera_intrinsics
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   const useHttp = hasFlag(argv, '--http') || process.env.VIO_HTTP === '1';
+  const recordRuns = hasFlag(argv, '--record');
   const port = parseIntegerOption(
     getArgument(argv, '--port') ?? process.env.PORT,
     '--port',
@@ -99,6 +101,37 @@ async function main(): Promise<void> {
     host: foxgloveHost,
     port: foxglovePort,
   });
+
+  let recorder: RunRecorder | null = null;
+  if (recordRuns) {
+    recorder = new RunRecorder({
+      runsDir: join(repoRoot, 'data', 'runs'),
+      server: {
+        name: 'vio-marker-fusion',
+        version,
+        tls: !useHttp,
+        httpHost: host,
+        httpPort: port,
+        ingestPath: '/ingest',
+        foxgloveHost,
+        foxglovePort,
+      },
+      markerMap,
+      markerMapSource: markerMapPath,
+      cameraCalibration: cameraCalibration.calibration,
+      cameraCalibrationSource: cameraCalibration.calibration
+        ? cameraCalibrationPath
+        : 'not_reported',
+      cameraCalibrationError: cameraCalibration.error,
+    });
+    try {
+      await recorder.initialize(Date.now() + 3000);
+      logger.info(`Grabación iniciada: ${recorder.filePath}`);
+    } catch (error) {
+      logger.error('No se pudo iniciar la grabación; el servidor continuará sin grabar:', error);
+      recorder = null;
+    }
+  }
 
   const app = express();
   app.disable('x-powered-by');
@@ -211,12 +244,20 @@ async function main(): Promise<void> {
       server,
       logger: logger.child('ingest'),
       onMessage: (message, context) => {
+        if (recorder) {
+          try {
+            recorder.enqueue(message, context);
+          } catch (error) {
+            logger.error('Error inesperado del grabador:', error);
+          }
+        }
         gateway.handleClientMessage(message, context);
       },
     });
     await listen(server, port, host);
   } catch (error) {
     await ingest?.close();
+    await recorder?.close(Date.now() + 3000);
     await gateway.close();
     throw error;
   }
@@ -257,6 +298,8 @@ async function main(): Promise<void> {
     }
     shuttingDown = true;
     logger.info(`${signal} recibido, cerrando...`);
+    const shutdownDeadlineMs = Date.now() + 5000;
+    const recorderDeadlineMs = shutdownDeadlineMs - 500;
     const forceTimer = setTimeout(() => {
       logger.error('El cierre no terminó en 5 s; saliendo de forma forzada.');
       process.exit(1);
@@ -265,10 +308,12 @@ async function main(): Promise<void> {
 
     try {
       await ingest?.close();
-      await gateway.close();
       await new Promise<void>((resolve) => {
         server.close(() => resolve());
       });
+      recorder?.beginClose(recorderDeadlineMs);
+      await recorder?.close(recorderDeadlineMs);
+      await gateway.close();
     } catch (error) {
       logger.error('Error al cerrar:', error);
     }
