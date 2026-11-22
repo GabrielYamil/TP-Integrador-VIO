@@ -299,6 +299,7 @@ async function main(): Promise<void> {
     shuttingDown = true;
     logger.info(`${signal} recibido, cerrando...`);
     const shutdownDeadlineMs = Date.now() + 5000;
+    const httpDeadlineMs = shutdownDeadlineMs - 2500;
     const recorderDeadlineMs = shutdownDeadlineMs - 500;
     const forceTimer = setTimeout(() => {
       logger.error('El cierre no terminó en 5 s; saliendo de forma forzada.');
@@ -308,14 +309,37 @@ async function main(): Promise<void> {
 
     try {
       await ingest?.close();
-      await new Promise<void>((resolve) => {
-        server.close(() => resolve());
-      });
-      recorder?.beginClose(recorderDeadlineMs);
+    } catch (error) {
+      logger.error('Error cerrando IngestServer:', error);
+    }
+
+    let httpClosed = true;
+    try {
+      httpClosed = await waitForAbsoluteDeadline(
+        new Promise<void>((resolve) => {
+          server.close(() => resolve());
+        }),
+        httpDeadlineMs,
+      );
+    } catch (error) {
+      httpClosed = false;
+      logger.error('Error cerrando el servidor HTTP/HTTPS:', error);
+    }
+    if (!httpClosed) {
+      logger.warn('El cierre HTTP excedió su presupuesto; se continúa con el grabador.');
+    }
+
+    recorder?.beginClose(recorderDeadlineMs);
+    try {
       await recorder?.close(recorderDeadlineMs);
+    } catch (error) {
+      logger.error('Error cerrando el grabador:', error);
+    }
+
+    try {
       await gateway.close();
     } catch (error) {
-      logger.error('Error al cerrar:', error);
+      logger.error('Error cerrando FoxgloveGateway:', error);
     }
 
     clearTimeout(forceTimer);
@@ -328,6 +352,30 @@ async function main(): Promise<void> {
   process.on('SIGTERM', () => {
     void shutdown('SIGTERM');
   });
+}
+
+async function waitForAbsoluteDeadline(
+  operation: Promise<void>,
+  deadlineMs: number,
+): Promise<boolean> {
+  const remainingMs = deadlineMs - Date.now();
+  if (remainingMs <= 0) {
+    return false;
+  }
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<false>((resolve) => {
+    timer = setTimeout(() => resolve(false), remainingMs);
+  });
+
+  try {
+    const result = await Promise.race([operation.then(() => true), deadline]);
+    return result;
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
 }
 
 function listen(server: Server, port: number, host: string): Promise<void> {

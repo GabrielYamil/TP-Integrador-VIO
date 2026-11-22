@@ -20,7 +20,7 @@ implementaron completamente.
 | 4 — cámara e intrínsecos       | **Implementada** | Captura, gris, preview, intrínsecos y `hello`. Endpoint verificado en PC; falta la validación en celular.                               |
 | 5 — detección de marcadores    | **Implementada** | Web Worker con OpenCV.js (AprilTag 36h11 + PnP IPPE Square), transferables zero-copy, debug 3D y mensajes `marker`.                     |
 | 6 — corrección de localización | **Implementada** | Módulo `LocalizationCorrector`, estrategias Directa (A) y Suavizada (B), filtrado de outliers, selector UI/URL y mensajes `correction`. |
-| 8 — registro de recorridos     | **Implementada** | Grabador JSONL opcional con `--record`, cola secuencial, metadatos y cierre controlado. Falta integración de corridas reales.           |
+| 8 — registro de recorridos     | **Implementada** | Grabador JSONL opcional con `--record`, cola secuencial, metadatos y cierre controlado. Validada con una corrida sintética.             |
 
 La Fase 0 no se declara cerrada hasta que Chrome Android acepte el certificado
 e inicie una sesión `immersive-ar` con tracking. En esta máquina no hay un
@@ -419,24 +419,46 @@ Cobertura incluida:
 - publicación atómica de manifiesto y ausencia de manifiesto ante errores;
 - cierre de JSONL confirmado antes de publicar el manifiesto.
 
-El 2026-11-21 se ejecutaron las verificaciones automáticas obligatorias:
+El 2026-11-21 se ejecutaron las verificaciones automatizadas finales:
 
-| Comando             | Resultado                             |
-| ------------------- | ------------------------------------- |
-| `pnpm typecheck`    | OK en los tres paquetes.              |
-| `pnpm test`         | 105 tests pasaron: 44 + 36 + 25.      |
-| `pnpm lint`         | OK, sin errores.                      |
-| `pnpm build`        | OK. El cliente multipágina se generó. |
-| `pnpm format:check` | OK después de aplicar Prettier.       |
+| Comando             | Resultado                     |
+| ------------------- | ----------------------------- |
+| `pnpm typecheck`    | OK.                           |
+| `pnpm test`         | 110 tests aprobados en total. |
+| `pnpm lint`         | OK.                           |
+| `pnpm build`        | OK.                           |
+| `pnpm format:check` | OK.                           |
+| `git diff --check`  | OK.                           |
 
-El 2026-11-21 se hizo una integración sintética con el servidor HTTP local:
-el simulador envió `hello` y 37 mensajes `pose` durante una corrida corta de
-2 segundos con la trayectoria circular y deriva. El archivo JSONL mostró
-`run_start`, los mensajes íntegros y timestamps separados de cliente y servidor.
-Al terminar el proceso por el harness de herramientas no se obtuvo `run_end`,
-como corresponde a una terminación no controlada de esa prueba. Tampoco se
-probó la recuperación ante un fallo real de disco ni se declaró cierre físico
-ni experimental de la Fase 8.
+El paquete `@vio/server` pasó 30 tests, incluyendo 14 pruebas del grabador
+JSONL.
+
+El 2026-11-21 se realizó también una prueba manual de integración local:
+
+- El servidor se inició con `--record --http`.
+- El simulador se conectó por WebSocket.
+- Se utilizó una trayectoria circular con deriva.
+- El dispositivo reportado fue `Sim-Test`.
+- El simulador envió 79 mensajes `pose`.
+- Se registraron 80 mensajes válidos en total, incluido el mensaje `hello`.
+- Se generó un archivo JSONL de 46.874 bytes.
+- Se generó un manifiesto de 636 bytes.
+- El JSONL contiene 82 registros:
+  - 1 `run_start`;
+  - 80 `client_message`;
+  - 1 `run_end`.
+- `written_records`: 80.
+- `dropped_records`: 0.
+- `write_errors`: 0.
+- `run_start_written`: true.
+- `run_end_written`: true.
+- `jsonl_closed`: true.
+- Estado del manifiesto: `complete`.
+- El cierre se realizó mediante `SIGINT`.
+
+Esta prueba valida el circuito de grabación con datos sintéticos, pero no
+demuestra la integración con ARCore, WebXR ni hardware Android real. No se
+probaron fallos reales de disco ni permisos del sistema de archivos.
 
 ## 9. Verificaciones manuales pendientes
 
