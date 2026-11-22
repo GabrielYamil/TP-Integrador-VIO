@@ -33,3 +33,11 @@ certs/
 
 # Calibración de cámara local (se versiona solo el ejemplo)
 config/camera_intrinsics.json
+
+# Corridas VIO generadas
+data/runs/*.jsonl
+data/runs/**/*.jsonl
+data/runs/*.manifest.json
+data/runs/**/*.manifest.json
+data/runs/*.manifest.json.tmp
+data/runs/**/*.manifest.json.tmp

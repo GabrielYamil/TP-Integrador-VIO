@@ -189,6 +189,9 @@ export class IngestServer {
   }
 
   #handleMessage(socket: WebSocket, data: WebSocket.RawData, isBinary: boolean): void {
+    if (this.#closed) {
+      return;
+    }
     const entry = this.#clients.get(socket);
     if (!entry) {
       return;
