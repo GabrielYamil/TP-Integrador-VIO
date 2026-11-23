@@ -16,7 +16,7 @@ físicas, cuya ejecución está pendiente.
 | 3 — cliente AR y pose cruda    | **Completada en POCO X7 Pro** | Ejes dirigidos, tracking 100 %, buffer 0, 0 inválidos y deriva estacionaria de 1,7 mm.             |
 | 4 — cámara e intrínsecos       | **Completada en POCO X7 Pro** | `camera-access`, textura real, gris a 10,2 Hz, intrínsecos estables y `hello` verificados.         |
 | 5 — detección de marcadores    | **Validación móvil parcial**  | 882 observaciones del ID 0 en pantalla; error medio 0,33 px y máximo 2,09 px.                      |
-| 6 — corrección de localización | **Integración validada**      | Directo/suavizado/Off pasaron en pantalla; falta validar posición con un mapa físico.              |
+| 6 — corrección de localización | **Completada**                | Tres modos y pose absoluta pasaron con un marcador de mapa controlado.                             |
 | 7 — visualización Foxglove     | **Completada**                | Layout de tres paneles validado en Foxglove Studio 3.6.0 y telemetría móvil recibida.              |
 | 8 — registro y evaluación      | **Parcial avanzada**          | Grabador y analizador implementados; falta analizar una corrida real y usar sus CSV en el informe. |
 | 9 — experimentos físicos       | **Preparada; pendiente**      | Guía creada; faltan mapa medido y al menos tres repeticiones por condición.                        |
@@ -590,21 +590,20 @@ No modificar los resultados automáticos sin volver a ejecutar los comandos.
 4. El mapa actual es sintético y todavía no representa una sala medida.
 5. Los intrínsecos derivados se validaron a 60 cm y mostraron un error de
    −6,23 %; no se realizó calibración propia porque quedó dentro de ±10 %.
-6. La detección, PnP y signos de ejes se validaron con un marcador en pantalla;
-   la corrección con un mapa físico sigue pendiente.
+6. La corrección se validó con un marcador de mapa controlado; todavía falta un
+   mapa completo de sala para los experimentos de la Fase 9.
 7. Falta una corrida móvil repetible para el informe de la Fase 8.
 8. `@foxglove/ws-protocol` 0.8.0 está deprecado, pero se mantiene por decisión
    del proyecto.
 
 ## 12. Próximo paso
 
-1. Medir la sala y reemplazar el mapa demo sintético.
-2. Probar corrección directa y suavizada con el mapa medido.
-3. Grabar recorridos repetibles y ejecutar `pnpm analyze` sobre cada JSONL.
-4. Seguir `docs/phase-9-physical-tests.md`, con al menos tres
+1. Grabar recorridos repetibles y ejecutar `pnpm analyze` sobre cada JSONL.
+2. Medir la sala y reemplazar el mapa demo sintético para la Fase 9.
+3. Seguir `docs/phase-9-physical-tests.md`, con al menos tres
    repeticiones por condición.
-5. Incorporar las tablas y gráficos al informe final y preparar el video/demo.
+4. Incorporar las tablas y gráficos al informe final y preparar el video/demo.
 
-Las fases 0, 1, 2, 3, 4, 5 y 7 están cerradas para el entorno probado. Las fases
-6 y 8 a 10 requieren el mapa medido,
+Las fases 0 a 7 están cerradas para el entorno probado. Las fases 8 a 10
+requieren corridas repetibles, el mapa medido y la entrega final.
 la evaluación repetible y la entrega final.

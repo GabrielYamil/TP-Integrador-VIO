@@ -18,7 +18,7 @@ documentación y la interfaz están en español; el código y los tests en ingl�
 | 3 — cliente WebXR y pose cruda      | **Completada en POCO X7 Pro.**                                          |
 | 4 — cámara e intrínsecos            | **Completada para el POCO X7 Pro.**                                     |
 | 5 — detección de marcadores y PnP   | **Completada en POCO X7 Pro**; error métrico de −6,23 % a 60 cm.        |
-| 6 — corrección de localización      | Modos validados en pantalla; falta mapa físico y posición absoluta.     |
+| 6 — corrección de localización      | **Completada** con mapa controlado y los tres modos.                    |
 | 7 — visualización en Foxglove       | **Completada**, validada en Foxglove Studio 3.6.0.                      |
 | 8 — registro y evaluación           | Grabador y analizador implementados; falta una corrida real y gráficos. |
 | 9 — experimentos físicos            | Guía preparada; ejecución pendiente.                                    |
@@ -339,10 +339,10 @@ emulador no las reemplaza. El plan restante está resumido en
 2. **Fase 5:** completada en POCO X7 Pro con un marcador ID 0 de 16 cm,
    una referencia medida de 60 cm y verificación de los tres ejes. Los
    intrínsecos derivados estimaron 56,26 cm (error −6,23 %).
-3. **Fase 6:** implementada y validada funcionalmente con el marcador en pantalla.
-   Directo emitió correcciones, suavizado redujo su magnitud 86–88 % y Off dejó
-   de emitirlas sin perder detecciones. Falta validar la posición absoluta con
-   un mapa físico medido.
+3. **Fase 6:** completada con el marcador ID 0 del mapa controlado. Directo emitió
+   correcciones, suavizado redujo su magnitud 86–88 % y Off dejó de emitirlas sin
+   perder detecciones. Para una referencia física de 60 cm, la pose corregida
+   quedó a 59 cm del marcador. El mapa completo de sala corresponde a la Fase 9.
 4. **Fase 8:** grabar y analizar una corrida real con `pnpm analyze`.
 5. **Fase 9:** ejecutar la guía de experimentos físicos con al menos tres
    repeticiones por condición.

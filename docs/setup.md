@@ -626,5 +626,6 @@ una precisión insuficiente.
 La detección y PnP de la Fase 5 se validaron con el AprilTag ID 0 de 16 cm
 mostrado en otra pantalla, a una distancia medida de 60 cm. Los signos de los
 tres ejes fueron coherentes y la distancia estimada fue 56,26 cm (error
-−6,23 %). Después se debe reemplazar el mapa sintético y comparar los modos de
-corrección de la Fase 6.
+−6,23 %). La Fase 6 se completó con el mapa controlado: Directo, Suavizado y Off
+respondieron correctamente y la pose corregida quedó a 0,59 m para una referencia
+física de 0,60 m. El mapa completo de sala queda para la Fase 9.

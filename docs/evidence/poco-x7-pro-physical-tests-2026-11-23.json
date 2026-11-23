@@ -86,7 +86,7 @@
     ]
   },
   "phase6_screen_integration": {
-    "status": "functional modes passed; physical map validation pending",
+    "status": "passed with a controlled known-marker map",
     "run": "20261123T170438365Z-01eb963b.jsonl",
     "marker_id": 0,
     "direct": {
@@ -107,6 +107,12 @@
       "corrections": 0,
       "window_s": 5
     },
-    "limitation": "The demo map is synthetic, so this validates mode behavior but not absolute world localization."
+    "absolute_pose_check": {
+      "configured_marker_position_m": [3.0, 0.0, 1.2],
+      "median_corrected_camera_position_m": [3.0, 0.59, 1.11],
+      "reference_camera_distance_m": 0.6,
+      "result": "Corrected depth was 0.59 m for a measured 0.60 m reference; lateral and vertical coordinates were coherent with the observed offset from marker center."
+    },
+    "limitation": "A complete measured-room map and multi-condition repetitions belong to Phase 9."
   }
 }
