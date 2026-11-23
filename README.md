@@ -10,19 +10,19 @@ documentación y la interfaz están en español; el código y los tests en ingl�
 
 ## Estado actual
 
-| Fase                                | Estado                                                                    |
-| ----------------------------------- | ------------------------------------------------------------------------- |
-| 0 — entorno, HTTPS y prueba AR      | **Completada** en POCO X7 Pro el 2026-11-22.                              |
-| 1 — matemática SE(3) y convenciones | **Completada.**                                                           |
-| 2 — relay y servidor Foxglove       | **Completada**, con simulador y telemetría móvil real.                    |
-| 3 — cliente WebXR y pose cruda      | **Completada en POCO X7 Pro.**                                            |
-| 4 — cámara e intrínsecos            | **Completada para el POCO X7 Pro.**                                       |
-| 5 — detección de marcadores y PnP   | Validada con ID 0 en pantalla; falta precisión métrica con tamaño medido. |
-| 6 — corrección de localización      | Implementada; falta validación física de los modos de corrección.         |
-| 7 — visualización en Foxglove       | **Completada**, validada en Foxglove Studio 3.6.0.                        |
-| 8 — registro y evaluación           | Grabador y analizador implementados; falta una corrida real y gráficos.   |
-| 9 — experimentos físicos            | Guía preparada; ejecución pendiente.                                      |
-| 10 — documentación y entrega        | En curso; faltan resultados físicos, informe y video/demo.                |
+| Fase                                | Estado                                                                  |
+| ----------------------------------- | ----------------------------------------------------------------------- |
+| 0 — entorno, HTTPS y prueba AR      | **Completada** en POCO X7 Pro el 2026-11-22.                            |
+| 1 — matemática SE(3) y convenciones | **Completada.**                                                         |
+| 2 — relay y servidor Foxglove       | **Completada**, con simulador y telemetría móvil real.                  |
+| 3 — cliente WebXR y pose cruda      | **Completada en POCO X7 Pro.**                                          |
+| 4 — cámara e intrínsecos            | **Completada para el POCO X7 Pro.**                                     |
+| 5 — detección de marcadores y PnP   | **Completada en POCO X7 Pro**; sesgo métrico de +11 % documentado.      |
+| 6 — corrección de localización      | Implementada; falta validación física de los modos de corrección.       |
+| 7 — visualización en Foxglove       | **Completada**, validada en Foxglove Studio 3.6.0.                      |
+| 8 — registro y evaluación           | Grabador y analizador implementados; falta una corrida real y gráficos. |
+| 9 — experimentos físicos            | Guía preparada; ejecución pendiente.                                    |
+| 10 — documentación y entrega        | En curso; faltan resultados físicos, informe y video/demo.              |
 
 La Fase 0 incluye el servidor HTTPS, el script de certificados, las páginas de
 diagnóstico WebXR y el modo mock de escritorio. El 2026-11-22 se instaló la CA
@@ -336,8 +336,9 @@ emulador no las reemplaza. El plan restante está resumido en
 ## Roadmap
 
 1. **Fases 0, 1, 2, 3, 4 y 7:** completadas para el entorno y dispositivo probados.
-2. **Fase 5:** detección y PnP validados con un marcador ID 0 en pantalla;
-   falta medir el tamaño visible y comprobar precisión métrica a distancia conocida.
+2. **Fase 5:** completada en POCO X7 Pro con un marcador ID 0 de 15,5 cm,
+   referencias medidas de 50 y 70 cm y verificación de los tres ejes. Los
+   intrínsecos derivados presentan un sesgo métrico repetible de aproximadamente +11 %.
 3. **Fase 6:** implementada en código. Corrección de localización (`LocalizationCorrector`)
    con mapa de marcadores, estrategias directa y suavizada, filtrado de outliers,
    selector de modo en UI y transmisión de pose corregida a Foxglove. Falta la
@@ -351,9 +352,9 @@ emulador no las reemplaza. El plan restante está resumido en
 
 - La validación móvil se realizó en un solo modelo, POCO X7 Pro; otros Android
   compatibles con ARCore pueden comportarse de forma diferente.
-- La precisión métrica de PnP todavía requiere un marcador de tamaño físico
-  medido y una distancia de referencia; la prueba en pantalla solo valida
-  detección, estabilidad y error de reproyección.
+- La precisión métrica de PnP presenta un sesgo repetible de aproximadamente
+  +11 % en el POCO X7 Pro; una calibración propia es opcional si se requiere
+  reducirlo.
 - `camera-access` es opcional. Si el dispositivo no lo habilita, `/ar.html`
   sigue funcionando solo con VIO y las Fases 4 y 5 quedan bloqueadas.
 - Foxglove Studio y el layout se validaron en escritorio; además recibió

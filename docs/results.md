@@ -538,7 +538,7 @@ Esta prueba valida el circuito de grabación con datos sintéticos, pero no demu
 - [x] El layout de Foxglove 3.6.0 se importó y validó en escritorio.
 - [x] Aislar avance, giro y altura para confirmar los signos de los ejes.
 - [x] Detectar un AprilTag ID 0 y medir error de reproyección y distancia estimada.
-- [ ] Validar PnP con un tamaño físico conocido.
+- [x] Validar PnP con un tamaño físico conocido (15,5 cm a 50 y 70 cm; sesgo +11 %).
 - [ ] Comparar los modos `off`, `direct` y `smooth` con recorridos repetibles.
 - [ ] Grabar y analizar una corrida móvil real.
 - [ ] Medir la sala y completar las repeticiones de la Fase 9.
@@ -585,24 +585,23 @@ No modificar los resultados automáticos sin volver a ejecutar los comandos.
    feature opcional en WebXR.
 3. El emulador de Android Studio no implementa WebXR.
 4. El mapa actual es sintético y todavía no representa una sala medida.
-5. Los intrínsecos derivados no se compararon con una calibración propia ni con
-   distancias PnP conocidas.
-6. La detección y PnP se validaron con un marcador en pantalla, pero falta
-   precisión métrica con tamaño y distancia medidos; la corrección sigue pendiente.
+5. Los intrínsecos derivados se validaron a distancias conocidas y mostraron un
+   sesgo métrico repetible de aproximadamente +11 %; no se realizó calibración propia.
+6. La detección, PnP y signos de ejes se validaron con un marcador en pantalla;
+   la corrección con un mapa físico sigue pendiente.
 7. Falta una corrida móvil repetible para el informe de la Fase 8.
 8. `@foxglove/ws-protocol` 0.8.0 está deprecado, pero se mantiene por decisión
    del proyecto.
 
 ## 12. Próximo paso
 
-1. Medir el tamaño visible del marcador y validar distancia PnP conocida.
-2. Medir la sala y reemplazar el mapa demo sintético.
-3. Probar corrección directa y suavizada con el mapa medido.
-4. Grabar recorridos repetibles y ejecutar `pnpm analyze` sobre cada JSONL.
-5. Seguir `docs/phase-9-physical-tests.md`, con al menos tres
+1. Medir la sala y reemplazar el mapa demo sintético.
+2. Probar corrección directa y suavizada con el mapa medido.
+3. Grabar recorridos repetibles y ejecutar `pnpm analyze` sobre cada JSONL.
+4. Seguir `docs/phase-9-physical-tests.md`, con al menos tres
    repeticiones por condición.
-6. Incorporar las tablas y gráficos al informe final y preparar el video/demo.
+5. Incorporar las tablas y gráficos al informe final y preparar el video/demo.
 
-Las fases 0, 1, 2, 3, 4 y 7 están cerradas para el entorno probado. La Fase 5
-tiene validación móvil parcial; las fases 6 y 8 a 10 requieren el mapa medido,
+Las fases 0, 1, 2, 3, 4, 5 y 7 están cerradas para el entorno probado. Las fases
+6 y 8 a 10 requieren el mapa medido,
 la evaluación repetible y la entrega final.

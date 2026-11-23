@@ -39,7 +39,7 @@
     }
   },
   "phase5_screen_marker": {
-    "status": "passed for detection and PnP stability",
+    "status": "passed; metric scale error measured and documented",
     "marker": "APRILTAG_36h11 ID 0 shown on a monitor with a white quiet zone",
     "mode": "off",
     "observations": 882,
@@ -60,8 +60,33 @@
       "mean": 0.6286,
       "max": 0.7174
     },
+    "metric_validation": {
+      "run": "20261123T170438365Z-01eb963b.jsonl",
+      "measured_marker_black_side_m": 0.155,
+      "configured_marker_side_m": 0.16,
+      "known_distances": [
+        {
+          "reference_m": 0.7,
+          "raw_pnp_m": 0.807,
+          "size_adjusted_pnp_m": 0.7818,
+          "error_percent": 11.7
+        },
+        {
+          "reference_m": 0.5,
+          "raw_pnp_m": 0.5735,
+          "size_adjusted_pnp_m": 0.5555,
+          "error_percent": 11.1
+        }
+      ],
+      "axis_checks": {
+        "camera_right": "T_cam_marker.x changed from +0.033 m to -0.101 m",
+        "camera_up": "T_cam_marker.y increased from -0.139 m to -0.117 m",
+        "camera_closer": "T_cam_marker.z decreased from 0.794 m to 0.563 m"
+      },
+      "result": "Detection, PnP stability, distance scaling, and axis signs passed. Distance has a repeatable +11% scale bias with XRView-derived intrinsics."
+    },
     "limitations": [
-      "The marker's physical on-screen size was not measured, so metric distance accuracy is not validated.",
+      "Metric distance has a repeatable +11% scale bias; use a device calibration if higher accuracy is required.",
       "The current marker map is synthetic; correction modes were not evaluated."
     ]
   }
