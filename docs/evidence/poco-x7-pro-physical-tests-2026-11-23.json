@@ -82,7 +82,31 @@
     },
     "limitations": [
       "A device calibration remains optional if accuracy better than the measured -6.23% is required.",
-      "The current marker map is synthetic; correction modes were not evaluated."
+      "The current marker map is synthetic; absolute corrected positions were not evaluated."
     ]
+  },
+  "phase6_screen_integration": {
+    "status": "functional modes passed; physical map validation pending",
+    "run": "20261123T170438365Z-01eb963b.jsonl",
+    "marker_id": 0,
+    "direct": {
+      "accepted_corrections": 55,
+      "median_delta_p_m": 0.0264,
+      "median_delta_angle_deg": 1.91,
+      "initial_map_jump_p_m": 3.1518,
+      "initial_map_jump_angle_deg": 84.27
+    },
+    "smooth": {
+      "accepted_corrections": 48,
+      "median_delta_p_m": 0.0036,
+      "median_delta_angle_deg": 0.22,
+      "result": "median correction was approximately 86-88% smaller than direct mode"
+    },
+    "off": {
+      "marker_observations": 48,
+      "corrections": 0,
+      "window_s": 5
+    },
+    "limitation": "The demo map is synthetic, so this validates mode behavior but not absolute world localization."
   }
 }

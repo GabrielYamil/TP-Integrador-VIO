@@ -16,7 +16,7 @@ físicas, cuya ejecución está pendiente.
 | 3 — cliente AR y pose cruda    | **Completada en POCO X7 Pro** | Ejes dirigidos, tracking 100 %, buffer 0, 0 inválidos y deriva estacionaria de 1,7 mm.             |
 | 4 — cámara e intrínsecos       | **Completada en POCO X7 Pro** | `camera-access`, textura real, gris a 10,2 Hz, intrínsecos estables y `hello` verificados.         |
 | 5 — detección de marcadores    | **Validación móvil parcial**  | 882 observaciones del ID 0 en pantalla; error medio 0,33 px y máximo 2,09 px.                      |
-| 6 — corrección de localización | **Implementada**              | Modos directo/suavizado, filtros y mensajes implementados; falta validación física.                |
+| 6 — corrección de localización | **Integración validada**      | Directo/suavizado/Off pasaron en pantalla; falta validar posición con un mapa físico.              |
 | 7 — visualización Foxglove     | **Completada**                | Layout de tres paneles validado en Foxglove Studio 3.6.0 y telemetría móvil recibida.              |
 | 8 — registro y evaluación      | **Parcial avanzada**          | Grabador y analizador implementados; falta analizar una corrida real y usar sus CSV en el informe. |
 | 9 — experimentos físicos       | **Preparada; pendiente**      | Guía creada; faltan mapa medido y al menos tres repeticiones por condición.                        |
