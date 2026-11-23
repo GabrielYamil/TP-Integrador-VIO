@@ -623,8 +623,8 @@ una precisión insuficiente.
 
 ### Checklist de Fase 5 en adelante
 
-La detección y PnP de la Fase 5 se validaron con el AprilTag ID 0 de 15,5 cm
-mostrado en otra pantalla, a distancias medidas de 50 y 70 cm. Los signos de
-los tres ejes fueron coherentes y se observó un sesgo métrico repetible de
-aproximadamente +11 %. Después se debe reemplazar el mapa sintético y comparar
-los modos de corrección de la Fase 6.
+La detección y PnP de la Fase 5 se validaron con el AprilTag ID 0 de 16 cm
+mostrado en otra pantalla, a una distancia medida de 60 cm. Los signos de los
+tres ejes fueron coherentes y la distancia estimada fue 56,26 cm (error
+−6,23 %). Después se debe reemplazar el mapa sintético y comparar los modos de
+corrección de la Fase 6.

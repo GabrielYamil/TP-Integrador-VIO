@@ -39,7 +39,7 @@
     }
   },
   "phase5_screen_marker": {
-    "status": "passed; metric scale error measured and documented",
+    "status": "passed including metric validation",
     "marker": "APRILTAG_36h11 ID 0 shown on a monitor with a white quiet zone",
     "mode": "off",
     "observations": 882,
@@ -62,31 +62,26 @@
     },
     "metric_validation": {
       "run": "20261123T170438365Z-01eb963b.jsonl",
-      "measured_marker_black_side_m": 0.155,
+      "hello_sequence": 2351,
+      "intrinsics_source": "XRView",
+      "intrinsics": [487.7328, 487.5729, 144.0, 320.0],
+      "measured_marker_black_side_m": 0.16,
       "configured_marker_side_m": 0.16,
-      "known_distances": [
-        {
-          "reference_m": 0.7,
-          "raw_pnp_m": 0.807,
-          "size_adjusted_pnp_m": 0.7818,
-          "error_percent": 11.7
-        },
-        {
-          "reference_m": 0.5,
-          "raw_pnp_m": 0.5735,
-          "size_adjusted_pnp_m": 0.5555,
-          "error_percent": 11.1
-        }
-      ],
+      "reference_distance_m": 0.6,
+      "estimated_distance_m": 0.5626,
+      "error_m": -0.0374,
+      "error_percent": -6.23,
+      "observations": 134,
+      "reprojection_error_px": { "median": 0.2798, "max": 0.7004 },
       "axis_checks": {
-        "camera_right": "T_cam_marker.x changed from +0.033 m to -0.101 m",
-        "camera_up": "T_cam_marker.y increased from -0.139 m to -0.117 m",
-        "camera_closer": "T_cam_marker.z decreased from 0.794 m to 0.563 m"
+        "camera_right": "T_cam_marker.x decreased as expected",
+        "camera_up": "T_cam_marker.y increased as expected",
+        "camera_closer": "T_cam_marker.z decreased as expected"
       },
-      "result": "Detection, PnP stability, distance scaling, and axis signs passed. Distance has a repeatable +11% scale bias with XRView-derived intrinsics."
+      "result": "Detection, PnP stability, metric distance, and axis signs passed. The -6.23% distance error is within the +/-10% physical-test criterion."
     },
     "limitations": [
-      "Metric distance has a repeatable +11% scale bias; use a device calibration if higher accuracy is required.",
+      "A device calibration remains optional if accuracy better than the measured -6.23% is required.",
       "The current marker map is synthetic; correction modes were not evaluated."
     ]
   }

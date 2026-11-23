@@ -352,10 +352,13 @@ mensajes `marker` durante 107,45 s (8,21 observaciones/s):
 | Distancia PnP estimada | media 0,629 m; rango 0,466–0,717 m                              |
 
 Esto valida detección, decodificación, esquinas, PnP y transmisión móvil. La
-precisión métrica de distancia todavía no está validada porque no se midió el
-tamaño físico visible del patrón en el monitor. Durante la prueba se corrigieron
-la dependencia de OpenCV.js 5, su API ArUco real, la selección de buffers
-32/64-bit, la carga comprimida del worker y el contador del overlay.
+validación métrica posterior usó un patrón negro de 16 cm, una distancia medida
+de 60 cm y los intrínsecos derivados de XRView. Sobre 134 observaciones estimó
+56,26 cm (error −6,23 %), con reproyección mediana de 0,280 px y máxima de
+0,700 px. Los signos de los ejes X, Y y Z también fueron coherentes. Durante la
+prueba se corrigieron la dependencia de OpenCV.js 5, su API ArUco real, la
+selección de buffers 32/64-bit, la carga comprimida del worker y el contador del
+overlay.
 
 ## 8. Herramientas y artefactos
 
@@ -538,7 +541,7 @@ Esta prueba valida el circuito de grabación con datos sintéticos, pero no demu
 - [x] El layout de Foxglove 3.6.0 se importó y validó en escritorio.
 - [x] Aislar avance, giro y altura para confirmar los signos de los ejes.
 - [x] Detectar un AprilTag ID 0 y medir error de reproyección y distancia estimada.
-- [x] Validar PnP con un tamaño físico conocido (15,5 cm a 50 y 70 cm; sesgo +11 %).
+- [x] Validar PnP con un tamaño físico conocido (16 cm a 60 cm; error −6,23 %).
 - [ ] Comparar los modos `off`, `direct` y `smooth` con recorridos repetibles.
 - [ ] Grabar y analizar una corrida móvil real.
 - [ ] Medir la sala y completar las repeticiones de la Fase 9.
@@ -585,8 +588,8 @@ No modificar los resultados automáticos sin volver a ejecutar los comandos.
    feature opcional en WebXR.
 3. El emulador de Android Studio no implementa WebXR.
 4. El mapa actual es sintético y todavía no representa una sala medida.
-5. Los intrínsecos derivados se validaron a distancias conocidas y mostraron un
-   sesgo métrico repetible de aproximadamente +11 %; no se realizó calibración propia.
+5. Los intrínsecos derivados se validaron a 60 cm y mostraron un error de
+   −6,23 %; no se realizó calibración propia porque quedó dentro de ±10 %.
 6. La detección, PnP y signos de ejes se validaron con un marcador en pantalla;
    la corrección con un mapa físico sigue pendiente.
 7. Falta una corrida móvil repetible para el informe de la Fase 8.

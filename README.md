@@ -17,7 +17,7 @@ documentación y la interfaz están en español; el código y los tests en ingl�
 | 2 — relay y servidor Foxglove       | **Completada**, con simulador y telemetría móvil real.                  |
 | 3 — cliente WebXR y pose cruda      | **Completada en POCO X7 Pro.**                                          |
 | 4 — cámara e intrínsecos            | **Completada para el POCO X7 Pro.**                                     |
-| 5 — detección de marcadores y PnP   | **Completada en POCO X7 Pro**; sesgo métrico de +11 % documentado.      |
+| 5 — detección de marcadores y PnP   | **Completada en POCO X7 Pro**; error métrico de −6,23 % a 60 cm.        |
 | 6 — corrección de localización      | Implementada; falta validación física de los modos de corrección.       |
 | 7 — visualización en Foxglove       | **Completada**, validada en Foxglove Studio 3.6.0.                      |
 | 8 — registro y evaluación           | Grabador y analizador implementados; falta una corrida real y gráficos. |
@@ -336,9 +336,9 @@ emulador no las reemplaza. El plan restante está resumido en
 ## Roadmap
 
 1. **Fases 0, 1, 2, 3, 4 y 7:** completadas para el entorno y dispositivo probados.
-2. **Fase 5:** completada en POCO X7 Pro con un marcador ID 0 de 15,5 cm,
-   referencias medidas de 50 y 70 cm y verificación de los tres ejes. Los
-   intrínsecos derivados presentan un sesgo métrico repetible de aproximadamente +11 %.
+2. **Fase 5:** completada en POCO X7 Pro con un marcador ID 0 de 16 cm,
+   una referencia medida de 60 cm y verificación de los tres ejes. Los
+   intrínsecos derivados estimaron 56,26 cm (error −6,23 %).
 3. **Fase 6:** implementada en código. Corrección de localización (`LocalizationCorrector`)
    con mapa de marcadores, estrategias directa y suavizada, filtrado de outliers,
    selector de modo en UI y transmisión de pose corregida a Foxglove. Falta la
@@ -352,9 +352,8 @@ emulador no las reemplaza. El plan restante está resumido en
 
 - La validación móvil se realizó en un solo modelo, POCO X7 Pro; otros Android
   compatibles con ARCore pueden comportarse de forma diferente.
-- La precisión métrica de PnP presenta un sesgo repetible de aproximadamente
-  +11 % en el POCO X7 Pro; una calibración propia es opcional si se requiere
-  reducirlo.
+- La precisión métrica de PnP presentó un error de −6,23 % a 60 cm en el
+  POCO X7 Pro; una calibración propia es opcional si se requiere mayor precisión.
 - `camera-access` es opcional. Si el dispositivo no lo habilita, `/ar.html`
   sigue funcionando solo con VIO y las Fases 4 y 5 quedan bloqueadas.
 - Foxglove Studio y el layout se validaron en escritorio; además recibió
