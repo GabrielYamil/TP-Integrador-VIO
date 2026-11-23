@@ -10,19 +10,19 @@ documentación y la interfaz están en español; el código y los tests en ingl�
 
 ## Estado actual
 
-| Fase                                | Estado                                                                  |
-| ----------------------------------- | ----------------------------------------------------------------------- |
-| 0 — entorno, HTTPS y prueba AR      | **Completada** en POCO X7 Pro el 2026-11-22.                            |
-| 1 — matemática SE(3) y convenciones | **Completada.**                                                         |
-| 2 — relay y servidor Foxglove       | **Completada**, con simulador y telemetría móvil real.                  |
-| 3 — cliente WebXR y pose cruda      | Validación móvil avanzada; falta una prueba dirigida de ejes.           |
-| 4 — cámara e intrínsecos            | **Completada para el POCO X7 Pro.**                                     |
-| 5 — detección de marcadores y PnP   | Implementada; falta validación física con marcador conocido.            |
-| 6 — corrección de localización      | Implementada; falta validación física de los modos de corrección.       |
-| 7 — visualización en Foxglove       | **Completada**, validada en Foxglove Studio 3.6.0.                      |
-| 8 — registro y evaluación           | Grabador y analizador implementados; falta una corrida real y gráficos. |
-| 9 — experimentos físicos            | Guía preparada; ejecución pendiente.                                    |
-| 10 — documentación y entrega        | En curso; faltan resultados físicos, informe y video/demo.              |
+| Fase                                | Estado                                                                    |
+| ----------------------------------- | ------------------------------------------------------------------------- |
+| 0 — entorno, HTTPS y prueba AR      | **Completada** en POCO X7 Pro el 2026-11-22.                              |
+| 1 — matemática SE(3) y convenciones | **Completada.**                                                           |
+| 2 — relay y servidor Foxglove       | **Completada**, con simulador y telemetría móvil real.                    |
+| 3 — cliente WebXR y pose cruda      | **Completada en POCO X7 Pro.**                                            |
+| 4 — cámara e intrínsecos            | **Completada para el POCO X7 Pro.**                                       |
+| 5 — detección de marcadores y PnP   | Validada con ID 0 en pantalla; falta precisión métrica con tamaño medido. |
+| 6 — corrección de localización      | Implementada; falta validación física de los modos de corrección.         |
+| 7 — visualización en Foxglove       | **Completada**, validada en Foxglove Studio 3.6.0.                        |
+| 8 — registro y evaluación           | Grabador y analizador implementados; falta una corrida real y gráficos.   |
+| 9 — experimentos físicos            | Guía preparada; ejecución pendiente.                                      |
+| 10 — documentación y entrega        | En curso; faltan resultados físicos, informe y video/demo.                |
 
 La Fase 0 incluye el servidor HTTPS, el script de certificados, las páginas de
 diagnóstico WebXR y el modo mock de escritorio. El 2026-11-22 se instaló la CA
@@ -44,8 +44,9 @@ de pose cruda en `odom` a ~30 Hz. El cliente WebSocket reconecta con backoff,
 mantiene un buffer acotado y descarta mensajes viejos. La pose corregida la
 deriva el servidor con `T_WORLD_ODOM_INITIAL`. En el POCO se observó tracking a
 27–30 FPS, buffer 0, movimiento fluido en Foxglove y una deriva estacionaria de
-1,7 mm en aproximadamente 30 s. Falta documentar por separado avance, giro y
-altura para cerrar la validación de los ejes.
+1,7 mm en aproximadamente 30 s. El 2026-11-23 se verificaron avance hacia
+`+world.x`, izquierda hacia `+world.y`, altura hacia `+world.z` y giro derecho
+sobre `-world.z`, con tracking 100 % y 0 mensajes inválidos.
 
 La Fase 4 agrega la captura de cámara cuando `camera-access` está disponible:
 `XRWebGLBinding.getCameraImage` se reduce en GPU a un framebuffer de 640 px de
@@ -66,7 +67,8 @@ usando un pool de buffers. La detección ejecuta `solvePnP` (con `SOLVEPNP_IPPE_
 calcula el error de reproyección (`≤ 5.0 px`) y transmite los mensajes `marker` por
 WebSocket al relay. Incluye overlay de depuración 2D/3D (`debug-overlay.ts`) que
 dibuja el contorno del marcador, su ID, error y los ejes 3D proyectados (X=rojo,
-Y=verde, Z=azul).
+Y=verde, Z=azul). En el POCO se registraron 882 observaciones del ID 0 mostrado
+en una pantalla, con error de reproyección medio de 0,33 px y máximo de 2,09 px.
 
 La Fase 6 agrega la corrección de localización con mapa conocido de marcadores
 (`LocalizationCorrector`). Descarga `config/marker_map.json` expuesto por el
@@ -248,7 +250,7 @@ simulada en la convención de WebXR. No valida ARCore ni `camera-access`.
 | `pnpm analyze -- <corrida.jsonl>`   | Calcula métricas y exporta JSON/CSV para el informe.          |
 | `pnpm preview`                      | `pnpm build` seguido de `pnpm start`.                         |
 | `pnpm typecheck`                    | TypeScript estricto en todos los paquetes.                    |
-| `pnpm test`                         | Vitest. Estado actual: 20 archivos, 115 tests.                |
+| `pnpm test`                         | Vitest. Estado actual: 21 archivos, 122 tests.                |
 | `pnpm lint`                         | ESLint.                                                       |
 | `pnpm format` / `pnpm format:check` | Prettier sobre el repo.                                       |
 | `pnpm cert:setup`                   | Genera certificados mkcert, exporta la CA y abre el firewall. |
@@ -325,37 +327,33 @@ pnpm format:check
 ```
 
 El estado de los tests automáticos y las verificaciones manuales se documenta
-en [`docs/results.md`](docs/results.md). En el estado actual hay 20 archivos y
-115 tests: 44 de `packages/shared`, 36 de `packages/client` y 35 de
+en [`docs/results.md`](docs/results.md). En el estado actual hay 21 archivos y
+122 tests: 44 de `packages/shared`, 43 de `packages/client` y 35 de
 `packages/server`. Las pruebas WebXR siguen requiriendo un celular real; el
 emulador no las reemplaza. El plan restante está resumido en
 [`docs/validation-plan.md`](docs/validation-plan.md).
 
 ## Roadmap
 
-1. **Fases 0, 1, 2, 4 y 7:** completadas para el entorno y dispositivo probados.
-2. **Fase 3:** terminar la prueba dirigida de avance, giro y altura.
-3. **Fase 5:** implementada en código. Detección AprilTag 36h11 en Web Worker
-   con OpenCV.js, `solvePnP`, overlay de depuración con ejes 3D proyectados y
-   transmisión de mensajes `marker`. Falta probar un marcador conocido.
-4. **Fase 6:** implementada en código. Corrección de localización (`LocalizationCorrector`)
+1. **Fases 0, 1, 2, 3, 4 y 7:** completadas para el entorno y dispositivo probados.
+2. **Fase 5:** detección y PnP validados con un marcador ID 0 en pantalla;
+   falta medir el tamaño visible y comprobar precisión métrica a distancia conocida.
+3. **Fase 6:** implementada en código. Corrección de localización (`LocalizationCorrector`)
    con mapa de marcadores, estrategias directa y suavizada, filtrado de outliers,
    selector de modo en UI y transmisión de pose corregida a Foxglove. Falta la
    validación física.
-5. **Fase 8:** grabar y analizar una corrida real con `pnpm analyze`.
-6. **Fase 9:** ejecutar la guía de experimentos físicos con al menos tres
+4. **Fase 8:** grabar y analizar una corrida real con `pnpm analyze`.
+5. **Fase 9:** ejecutar la guía de experimentos físicos con al menos tres
    repeticiones por condición.
-7. **Fase 10:** incorporar tablas/gráficos y preparar el informe y video final.
+6. **Fase 10:** incorporar tablas/gráficos y preparar el informe y video final.
 
 ## Limitaciones conocidas
 
 - La validación móvil se realizó en un solo modelo, POCO X7 Pro; otros Android
   compatibles con ARCore pueden comportarse de forma diferente.
-- La Fase 3 todavía necesita una prueba dirigida que confirme los signos de los
-  ejes al avanzar, girar y variar la altura.
-- La detección de marcadores y estimación de pose de la Fase 5 está implementada
-  en código con OpenCV.js, pero la tasa de procesamiento y precisión de PnP en
-  celular real aún no se validaron.
+- La precisión métrica de PnP todavía requiere un marcador de tamaño físico
+  medido y una distancia de referencia; la prueba en pantalla solo valida
+  detección, estabilidad y error de reproyección.
 - `camera-access` es opcional. Si el dispositivo no lo habilita, `/ar.html`
   sigue funcionando solo con VIO y las Fases 4 y 5 quedan bloqueadas.
 - Foxglove Studio y el layout se validaron en escritorio; además recibió

@@ -10,6 +10,16 @@ export interface MarkerDetectorOptions {
   markerSizes?: Record<number, number>;
 }
 
+function firstNonEmptyData(mat: any, keys: string[], minimumLength = 1): ArrayLike<number> | null {
+  for (const key of keys) {
+    const data = mat?.[key] as ArrayLike<number> | undefined;
+    if (data && data.length >= minimumLength) {
+      return data;
+    }
+  }
+  return null;
+}
+
 export class MarkerDetector {
   readonly #cv: any;
   #detector: any = null;
@@ -44,17 +54,24 @@ export class MarkerDetector {
       dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_6X6_250);
     }
 
-    const params = cv.DetectorParameters
-      ? new cv.DetectorParameters()
-      : new cv.aruco.DetectorParameters();
+    // OpenCV.js 5 exports namespaced C++ classes with an `aruco_` prefix.
+    // Keep the older shapes as fallbacks for custom builds.
+    const DetectorParameters =
+      cv.aruco_DetectorParameters ?? cv.DetectorParameters ?? cv.aruco?.DetectorParameters;
+    const ArucoDetector = cv.aruco_ArucoDetector ?? cv.ArucoDetector ?? cv.aruco?.ArucoDetector;
+    const RefineParameters =
+      cv.aruco_RefineParameters ?? cv.RefineParameters ?? cv.aruco?.RefineParameters;
 
-    if (cv.ArucoDetector) {
-      this.#detector = new cv.ArucoDetector(dict, params);
-    } else if (cv.aruco && cv.aruco.ArucoDetector) {
-      this.#detector = new cv.aruco.ArucoDetector(dict, params);
-    } else {
-      throw new Error('OpenCV.js no expone ArucoDetector');
+    if (!DetectorParameters || !ArucoDetector) {
+      throw new Error(
+        'OpenCV.js no incluye el modulo ArUco/AprilTag; se requiere OpenCV.js 5 con objdetect',
+      );
     }
+
+    const params = new DetectorParameters();
+    this.#detector = RefineParameters
+      ? new ArucoDetector(dict, params, new RefineParameters(10, 3, true))
+      : new ArucoDetector(dict, params);
   }
 
   /**
@@ -81,18 +98,30 @@ export class MarkerDetector {
     try {
       this.#detector.detectMarkers(grayMat, cornersVector, idsMat, rejectedVector);
 
-      const numDetected = idsMat.rows > 0 ? idsMat.rows : idsMat.total ? idsMat.total() : 0;
+      const numDetected = idsMat.total ? idsMat.total() : idsMat.rows;
       if (numDetected === 0) {
         return [];
       }
 
       const results: MarkerDetectionResult[] = [];
-      const idsData = idsMat.data32S || idsMat.data32F;
+      const idsData = firstNonEmptyData(idsMat, ['data32S', 'data32F'], numDetected);
+      const cornerCount =
+        typeof cornersVector.size === 'function' ? cornersVector.size() : numDetected;
+
+      if (!idsData || idsData.length < numDetected || cornerCount < numDetected) {
+        throw new Error(
+          `Salida ArUco incompleta: ids=${numDetected}, corners=${cornerCount}, idData=${idsData?.length ?? 0}`,
+        );
+      }
 
       for (let i = 0; i < numDetected; i++) {
         const id = idsData[i];
         const cornerMat = cornersVector.get(i);
-        const data = cornerMat.data32F;
+        const data = firstNonEmptyData(cornerMat, ['data32F', 'data64F'], 8);
+        if (!cornerMat || !data || data.length < 8) {
+          cornerMat?.delete?.();
+          throw new Error(`Esquinas ArUco inválidas para id=${id}: ${data?.length ?? 0} valores`);
+        }
 
         // Esquinas 2D de la imagen: top-left, top-right, bottom-right, bottom-left
         const corners: [number, number][] = [
@@ -192,47 +221,59 @@ export class MarkerDetector {
 
       // Calcular error de reproyección
       const projPoints = new cv.Mat();
-      cv.projectPoints(objPoints, rvec, tvec, cameraMatrix, distCoeffs, projPoints);
+      let reproj_err_px: number;
+      try {
+        cv.projectPoints(objPoints, rvec, tvec, cameraMatrix, distCoeffs, projPoints);
+        const projData = firstNonEmptyData(projPoints, ['data64F', 'data32F'], 8);
+        if (!projData || projData.length < 8) {
+          return null;
+        }
 
-      let totalErr = 0;
-      const projData = projPoints.data64F || projPoints.data32F;
-      for (let j = 0; j < 4; j++) {
-        const dx = projData[j * 2] - corners[j][0];
-        const dy = projData[j * 2 + 1] - corners[j][1];
-        totalErr += Math.hypot(dx, dy);
+        let totalErr = 0;
+        for (let j = 0; j < 4; j++) {
+          const dx = projData[j * 2] - corners[j][0];
+          const dy = projData[j * 2 + 1] - corners[j][1];
+          totalErr += Math.hypot(dx, dy);
+        }
+        reproj_err_px = totalErr / 4;
+      } finally {
+        projPoints.delete();
       }
-      const reproj_err_px = totalErr / 4;
-      projPoints.delete();
 
       // Convertir rvec a matriz de rotación 3x3
       const R = new cv.Mat();
-      cv.Rodrigues(rvec, R);
-      const rData = R.data64F || R.data32F;
+      try {
+        cv.Rodrigues(rvec, R);
+        const rData = firstNonEmptyData(R, ['data64F', 'data32F'], 9);
+        const tData = firstNonEmptyData(tvec, ['data64F', 'data32F'], 3);
+        if (!rData || rData.length < 9 || !tData || tData.length < 3) {
+          return null;
+        }
 
-      // Rodrigues entrega matriz R en formato row-major.
-      // Convertimos a column-major Mat3 para quatFromMat3:
-      const mat3ColMajor: Mat3 = [
-        rData[0],
-        rData[3],
-        rData[6],
-        rData[1],
-        rData[4],
-        rData[7],
-        rData[2],
-        rData[5],
-        rData[8],
-      ];
+        // Rodrigues entrega matriz R en formato row-major.
+        // Convertimos a column-major Mat3 para quatFromMat3:
+        const mat3ColMajor: Mat3 = [
+          rData[0],
+          rData[3],
+          rData[6],
+          rData[1],
+          rData[4],
+          rData[7],
+          rData[2],
+          rData[5],
+          rData[8],
+        ];
 
-      const q = quatFromMat3(mat3ColMajor);
-      const tData = tvec.data64F || tvec.data32F;
-      const p: [number, number, number] = [tData[0], tData[1], tData[2]];
+        const q = quatFromMat3(mat3ColMajor);
+        const p: [number, number, number] = [tData[0], tData[1], tData[2]];
 
-      R.delete();
-
-      return {
-        T_cam_marker: { p, q },
-        reproj_err_px,
-      };
+        return {
+          T_cam_marker: { p, q },
+          reproj_err_px,
+        };
+      } finally {
+        R.delete();
+      }
     } catch {
       return null;
     } finally {

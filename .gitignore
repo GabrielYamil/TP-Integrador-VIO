@@ -35,6 +35,7 @@ certs/
 config/camera_intrinsics.json
 
 # Corridas VIO generadas
+data/runs/
 data/runs/*.jsonl
 data/runs/**/*.jsonl
 data/runs/*.manifest.json

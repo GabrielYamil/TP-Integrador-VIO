@@ -590,17 +590,17 @@ suscritos.
 - [x] El overlay muestra tracking, FPS, conexión y mensajes enviados.
 - [x] La pose cruda llega a `/health` y a Foxglove (`/pose/raw`, `/tf`).
 - [x] La pose se mueve con fluidez y a una frecuencia cercana a 30 Hz.
-- [ ] Avanzar, girar y cambiar de altura producen el movimiento esperado en
+- [x] Avanzar, girar y cambiar de altura producen el movimiento esperado en
       `world`.
 - [x] La prueba se registra en `docs/results.md`.
 
-La Fase 3 tiene validación móvil avanzada. Solo falta aislar avance, giro y
-altura y registrar el signo de cada eje para cerrarla sin reservas.
+La Fase 3 quedó aceptada para el POCO X7 Pro el **2026-11-23**: avance,
+izquierda, altura y yaw derecho tuvieron los signos esperados en `world`.
 
 ### Checklist de Fase 4
 
 - [x] La captura compila y se incluye en el build multipágina.
-- [x] `pnpm test` pasa los 115 tests (44 shared + 36 client + 35 server).
+- [x] `pnpm test` pasa los 122 tests (44 shared + 43 client + 35 server).
 - [x] El endpoint `/config/camera_intrinsics.json` responde 404 sin archivo.
 - [x] Con una calibración válida responde 200 y `/health` marca
       `camera_intrinsics.available: true`.
@@ -623,6 +623,7 @@ una precisión insuficiente.
 
 ### Checklist de Fase 5 en adelante
 
-Las fases 5 y 6 ya están implementadas. La siguiente prueba manual es mostrar
-un AprilTag conocido en otra pantalla, validar detección/PnP y después comparar
-los modos de corrección.
+La detección y PnP de la Fase 5 se validaron con el AprilTag ID 0 mostrado en
+otra pantalla. Falta medir el tamaño físico visible y una distancia conocida;
+después se debe reemplazar el mapa sintético y comparar los modos de corrección
+de la Fase 6.

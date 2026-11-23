@@ -32,6 +32,7 @@ import { readRuntimeConfig } from './client-config';
 import { drawDebugOverlay } from './debug-overlay';
 import { describeDevice } from './device-label';
 import { LocalizationCorrector } from './localization-corrector';
+import { advanceRateLimitClock } from './rate-limit-clock';
 import { byId, formatVector } from './ui';
 import type { MarkerDetectionResult, WorkerResponse } from './worker-protocol';
 import type { IngestConnectionState, IngestStats } from './ws-client';
@@ -40,6 +41,7 @@ import { IngestClient } from './ws-client';
 type CameraFeatureState = 'unknown' | 'enabled' | 'unavailable';
 type CameraCaptureState = 'idle' | 'waiting' | 'capturing' | 'error';
 type IntrinsicsSource = 'none' | 'derived' | 'calibration';
+type MarkerWorkerState = 'loading' | 'ready' | 'error';
 
 type XRSessionWithFeatures = XRSession & { enabledFeatures?: readonly string[] };
 
@@ -60,6 +62,7 @@ const secureStateEl = byId<HTMLSpanElement>('secure-state');
 const supportStateEl = byId<HTMLSpanElement>('support-state');
 const sessionStateEl = byId<HTMLSpanElement>('session-state');
 const ingestStateEl = byId<HTMLSpanElement>('ingest-state');
+const detectorStateEl = byId<HTMLSpanElement>('detector-state');
 const ingestUrlEl = byId<HTMLElement>('ingest-url');
 const poseHzEl = byId<HTMLElement>('pose-hz');
 const foxgloveUrlEl = byId<HTMLElement>('foxglove-url');
@@ -74,6 +77,7 @@ const overlayCameraEl = byId<HTMLElement>('overlay-camera');
 const overlayCameraStateEl = byId<HTMLElement>('overlay-camera-state');
 const overlayCameraSizeEl = byId<HTMLElement>('overlay-camera-size');
 const overlayCameraFpsEl = byId<HTMLElement>('overlay-camera-fps');
+const overlayDetectorStateEl = byId<HTMLElement>('overlay-detector-state');
 const overlayIntrinsicsEl = byId<HTMLElement>('overlay-intrinsics');
 const overlayIntrinsicsSourceEl = byId<HTMLElement>('overlay-intrinsics-source');
 const overlayHelloEl = byId<HTMLElement>('overlay-hello');
@@ -138,20 +142,35 @@ let lastFrameErrorMs = 0;
 let logLines = 0;
 
 let markerWorker: Worker | null = null;
+let markerWorkerState: MarkerWorkerState = 'loading';
+let markerWorkerDetail = '';
 const workerBufferPool: ArrayBuffer[] = [];
 let latestDetections: MarkerDetectionResult[] = [];
 
+function setMarkerWorkerState(state: MarkerWorkerState, detail = ''): void {
+  markerWorkerState = state;
+  markerWorkerDetail = detail;
+  updateUi();
+}
+
+function canStartSession(): boolean {
+  return window.isSecureContext && supported === true && markerWorkerState === 'ready';
+}
+
 function initWorker(): void {
   if (typeof Worker === 'undefined') {
+    setMarkerWorkerState('error', 'Web Worker no disponible');
     return;
   }
   try {
+    setMarkerWorkerState('loading');
     markerWorker = new Worker(new URL('./marker-worker.ts', import.meta.url), {
       type: 'module',
     });
     markerWorker.onmessage = (event: MessageEvent<WorkerResponse>) => {
       const data = event.data;
       if (data.type === 'ready') {
+        setMarkerWorkerState('ready');
         log('Web Worker de marcadores (OpenCV.js) listo', 'ok');
         return;
       }
@@ -159,6 +178,7 @@ function initWorker(): void {
         if (data.buffer) {
           workerBufferPool.push(data.buffer);
         }
+        setMarkerWorkerState('error', data.error);
         log(data.error, 'warn');
         return;
       }
@@ -195,8 +215,27 @@ function initWorker(): void {
         updateUi();
       }
     };
+    markerWorker.onerror = (event) => {
+      const detail = event.message || 'Error desconocido al ejecutar el Web Worker';
+      setMarkerWorkerState('error', detail);
+      log(`Error del Web Worker de marcadores: ${detail}`, 'error');
+    };
+    markerWorker.onmessageerror = () => {
+      const detail = 'No se pudo interpretar la respuesta del Web Worker';
+      setMarkerWorkerState('error', detail);
+      log(detail, 'error');
+    };
+    window.setTimeout(() => {
+      if (markerWorkerState === 'loading') {
+        const detail = 'sin respuesta después de 120 s';
+        setMarkerWorkerState('error', detail);
+        log(`Web Worker de marcadores ${detail}`, 'error');
+      }
+    }, 120_000);
   } catch (err) {
-    log(`Error al instanciar el Worker de marcadores: ${errorMessage(err)}`, 'warn');
+    const detail = errorMessage(err);
+    setMarkerWorkerState('error', detail);
+    log(`Error al instanciar el Worker de marcadores: ${detail}`, 'warn');
   }
 }
 
@@ -410,11 +449,21 @@ function updateUi(): void {
     `Relay: ${connectionLabel(stats.state)}`,
     connectionPillStatus(stats.state),
   );
+  setPill(
+    detectorStateEl,
+    markerWorkerState === 'ready'
+      ? 'Detector: listo'
+      : markerWorkerState === 'loading'
+        ? 'Detector: cargando…'
+        : `Detector: error (${markerWorkerDetail || 'desconocido'})`,
+    markerWorkerState === 'ready' ? 'ok' : markerWorkerState === 'loading' ? 'pending' : 'fail',
+  );
+  startButton.disabled = !canStartSession() || starting || sessionActive;
 
   overlayTrackingEl.textContent = tracking;
   overlayTrackingEl.className = trackingClass(tracking);
   overlayFpsEl.textContent = fps.toFixed(1);
-  overlayMarkersEl.textContent = '0';
+  overlayMarkersEl.textContent = String(latestDetections.length);
   overlayConnectionEl.textContent = connectionLabel(stats.state);
   overlayConnectionEl.className = connectionClass(stats.state);
   overlaySentEl.textContent = String(stats.sent);
@@ -433,6 +482,18 @@ function updateUi(): void {
     ? `${cameraFrameInfo.width}×${cameraFrameInfo.height}`
     : '—';
   overlayCameraFpsEl.textContent = cameraFrameInfo ? cameraFps.toFixed(1) : '—';
+  overlayDetectorStateEl.textContent =
+    markerWorkerState === 'ready'
+      ? 'listo'
+      : markerWorkerState === 'loading'
+        ? 'cargando…'
+        : `error: ${markerWorkerDetail || 'desconocido'}`;
+  overlayDetectorStateEl.className =
+    markerWorkerState === 'ready'
+      ? 'value ok'
+      : markerWorkerState === 'error'
+        ? 'value warn'
+        : 'value';
   overlayIntrinsicsEl.textContent = formatIntrinsics(cameraIntrinsics, cameraSkew);
   overlayIntrinsicsSourceEl.textContent = intrinsicsSourceLabel(intrinsicsSource);
   overlayHelloEl.textContent =
@@ -687,10 +748,9 @@ function processFrame(time: number, frame: XRFrame): void {
     corrector.tick();
     worldPose = corrector.getCorrectedCameraPose(raw);
 
-    const sendIntervalMs = 1000 / config.poseHz;
-    // Tolerancia del 10 % para no perder un envío por el jitter del frame.
-    if (lastPoseSentMs < 0 || time - lastPoseSentMs >= sendIntervalMs * 0.9) {
-      lastPoseSentMs = time;
+    const nextPoseSentMs = advanceRateLimitClock(time, lastPoseSentMs, config.poseHz);
+    if (nextPoseSentMs !== null) {
+      lastPoseSentMs = nextPoseSentMs;
       const message: PoseMessagePayload = {
         type: 'pose',
         // XRFrame.time usa la misma base que performance.now(). Se convierte a
@@ -794,7 +854,7 @@ function onSessionEnd(): void {
   startScreen.hidden = false;
   overlayStopButton.disabled = true;
   document.body.classList.remove('session-active');
-  startButton.disabled = !(window.isSecureContext && supported === true);
+  startButton.disabled = !canStartSession();
 
   log('Sesión AR finalizada', 'info');
   updateUi();
@@ -963,7 +1023,7 @@ async function startSession(): Promise<void> {
     startScreen.hidden = false;
     overlayStopButton.disabled = true;
     document.body.classList.remove('session-active');
-    startButton.disabled = !(window.isSecureContext && supported === true);
+    startButton.disabled = !canStartSession();
 
     const failedSession = session ?? current;
     if (failedSession) {
@@ -1080,7 +1140,7 @@ async function init(): Promise<void> {
       'la imagen en gris y los intrínsecos se publican en el overlay.';
   }
 
-  startButton.disabled = !(window.isSecureContext && supported === true);
+  startButton.disabled = !canStartSession();
   updateUi();
 }
 

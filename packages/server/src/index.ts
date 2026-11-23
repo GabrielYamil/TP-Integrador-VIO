@@ -16,6 +16,7 @@ import { createServer as createHttpsServer } from 'node:https';
 import { networkInterfaces } from 'node:os';
 import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import compression from 'compression';
 import express from 'express';
 import { loadOptionalCameraCalibration } from './camera-calibration-loader';
 import { getArgument, hasFlag, parseIntegerOption } from './cli';
@@ -135,6 +136,7 @@ async function main(): Promise<void> {
 
   const app = express();
   app.disable('x-powered-by');
+  app.use(compression({ threshold: 1024 }));
 
   let ingest: IngestServer | undefined;
 

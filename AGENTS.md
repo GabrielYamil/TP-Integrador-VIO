@@ -233,7 +233,7 @@ inválidos con log.
 
 ## 5. Estado actual
 
-Fecha de referencia: **2026-11-22**.
+Fecha de referencia: **2026-11-23**.
 
 - **Fase 0:** completada en un POCO X7 Pro. La CA de mkcert está instalada en
   Android; HTTPS por LAN, `immersive-ar`, `local-floor` y `camera-access` se
@@ -245,18 +245,21 @@ Fecha de referencia: **2026-11-22**.
   Foxglove en `:8765`, cinco tópicos y simulador. El 2026-11-22 recibió
   telemetría real del POCO: 3502 mensajes válidos, 0 inválidos, 3497 `pose` y
   5 `hello`; Foxglove se suscribió a los cinco tópicos.
-- **Fase 3:** implementada y con validación móvil avanzada. Incluye
+- **Fase 3:** completada en el POCO X7 Pro. Incluye
   `/ar.html`, sesión `immersive-ar` con `local-floor` y fallback a `local`,
   overlay de tracking/FPS/conexión, envío de pose cruda en `odom` a 30 Hz y el
   cliente WebSocket con reconexión, buffer de 120 mensajes y descarte a los 3 s.
-  En el POCO se observaron 27–30 FPS, buffer 0, pose fluida en Foxglove y deriva
-  estacionaria de 1,7 mm en ~30 s. Falta una prueba dirigida de avance, giro y
-  altura para cerrar los signos de los ejes.
+  En el POCO se observaron 27–30 FPS, buffer 0, pose fluida en Foxglove, deriva
+  estacionaria de 1,7 mm en ~30 s y los signos esperados para avance, izquierda,
+  altura y yaw derecho.
 - **Fase 4:** completada para el POCO X7 Pro. `camera-access` entregó una textura
   864×1920; el cliente produjo gris 288×640 a 10,2 Hz con orientación correcta,
   intrínsecos estables `[487.7, 487.6, 144.0, 320.0]` y mensajes `hello`.
-- **Fases 5 y 6:** implementadas y cubiertas por tests, pero todavía sin
-  validación física con marcador conocido.
+- **Fase 5:** detección y PnP validados en el POCO con 882 observaciones del ID 0
+  mostrado en pantalla (error medio 0,33 px). Falta validar precisión métrica
+  con tamaño físico y distancia medidos.
+- **Fase 6:** implementada y cubierta por tests, sin validación física del mapa
+  ni de los modos de corrección.
 - **Fase 7:** completada. El layout de tres paneles en `foxglove/layout.json`
   fue importado y validado con Foxglove Studio 3.6.0; también se recibieron los
   cinco tópicos de la telemetría real del POCO.

@@ -1,0 +1,68 @@
+{
+  "date": "2026-11-23",
+  "device": "POCO X7 Pro",
+  "browser": "Chrome Android",
+  "connection": "HTTPS LAN 192.168.0.179:8443",
+  "phase3_axes": {
+    "status": "passed",
+    "tracking": "100% in all directed runs",
+    "invalid_messages": 0,
+    "forward": {
+      "poses": 280,
+      "duration_s": 13.83,
+      "world_delta_m": [1.65, -0.07, 0.0],
+      "result": "forward maps to +world.x"
+    },
+    "left": {
+      "poses": 277,
+      "duration_s": 13.65,
+      "world_delta_m": [0.2, 1.65, 0.01],
+      "result": "left maps to +world.y"
+    },
+    "up": {
+      "poses": 268,
+      "duration_s": 15.16,
+      "world_delta_m": [-0.05, 0.0, 0.55],
+      "result": "up maps to +world.z"
+    },
+    "yaw_right": {
+      "poses": 279,
+      "duration_s": 13.31,
+      "relative_angle_deg": 91.84,
+      "relative_axis": [0.016, -0.005, -1.0],
+      "result": "right yaw maps to rotation about -world.z"
+    },
+    "pose_rate": {
+      "camera_hz_1_preview_off_hz": 26.548,
+      "camera_hz_10_preview_on_hz": 21.755,
+      "note": "camera processing at 10 Hz reduces the full-pipeline pose rate"
+    }
+  },
+  "phase5_screen_marker": {
+    "status": "passed for detection and PnP stability",
+    "marker": "APRILTAG_36h11 ID 0 shown on a monitor with a white quiet zone",
+    "mode": "off",
+    "observations": 882,
+    "duration_s": 107.449,
+    "observation_rate_hz": 8.208,
+    "ids": { "0": 882 },
+    "reprojection_error_px": {
+      "min": 0.0107,
+      "median": 0.2902,
+      "p90": 0.5617,
+      "mean": 0.3258,
+      "max": 2.0916
+    },
+    "estimated_distance_m": {
+      "min": 0.4663,
+      "median": 0.6488,
+      "p90": 0.7047,
+      "mean": 0.6286,
+      "max": 0.7174
+    },
+    "limitations": [
+      "The marker's physical on-screen size was not measured, so metric distance accuracy is not validated.",
+      "The current marker map is synthetic; correction modes were not evaluated."
+    ]
+  }
+}

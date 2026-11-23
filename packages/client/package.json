@@ -11,7 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@techstark/opencv-js": "^4.10.0-0",
+    "@techstark/opencv-js": "^5.0.0-release.1",
     "@vio/shared": "workspace:*"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 # Resultados y estado de validación
 
-Última actualización: **2026-11-22**.
+Última actualización: **2026-11-23**.
 
 Este informe reúne el estado de las fases 0 a 10. La Fase 7 fue validada en
 escritorio con Foxglove Studio 3.6.0. La Fase 9 cuenta con una guía de pruebas
@@ -8,19 +8,19 @@ físicas, cuya ejecución está pendiente.
 
 ## Resumen
 
-| Fase                           | Estado                          | Observación                                                                                                     |
-| ------------------------------ | ------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| 0 — entorno y HTTPS            | **Completada**                  | CA instalada en POCO X7 Pro; HTTPS LAN, `immersive-ar`, `local-floor` y sesión real verificados.                |
-| 1 — matemática y convenciones  | **Completada**                  | 44 tests de matemática, convenciones, mensajes, mapa y cámara.                                                  |
-| 2 — relay y Foxglove           | **Completada**                  | Simulador y telemetría real del POCO publicados en los cinco tópicos.                                           |
-| 3 — cliente AR y pose cruda    | **Validación parcial avanzada** | Tracking a 27–30 FPS, pose fluida, buffer 0 y deriva estacionaria de 1,7 mm; falta una prueba dirigida de ejes. |
-| 4 — cámara e intrínsecos       | **Completada en POCO X7 Pro**   | `camera-access`, textura real, gris a 10,2 Hz, intrínsecos estables y `hello` verificados.                      |
-| 5 — detección de marcadores    | **Implementada**                | AprilTag 36h11 y PnP cubiertos por tests; falta validación con marcador conocido.                               |
-| 6 — corrección de localización | **Implementada**                | Modos directo/suavizado, filtros y mensajes implementados; falta validación física.                             |
-| 7 — visualización Foxglove     | **Completada**                  | Layout de tres paneles validado en Foxglove Studio 3.6.0 y telemetría móvil recibida.                           |
-| 8 — registro y evaluación      | **Parcial avanzada**            | Grabador y analizador implementados; falta analizar una corrida real y usar sus CSV en el informe.              |
-| 9 — experimentos físicos       | **Preparada; pendiente**        | Guía creada; faltan mapa medido y al menos tres repeticiones por condición.                                     |
-| 10 — documentación y entrega   | **En curso**                    | README, guías y evidencias actualizados; faltan resultados físicos, informe y video/demo.                       |
+| Fase                           | Estado                        | Observación                                                                                        |
+| ------------------------------ | ----------------------------- | -------------------------------------------------------------------------------------------------- |
+| 0 — entorno y HTTPS            | **Completada**                | CA instalada en POCO X7 Pro; HTTPS LAN, `immersive-ar`, `local-floor` y sesión real verificados.   |
+| 1 — matemática y convenciones  | **Completada**                | 44 tests de matemática, convenciones, mensajes, mapa y cámara.                                     |
+| 2 — relay y Foxglove           | **Completada**                | Simulador y telemetría real del POCO publicados en los cinco tópicos.                              |
+| 3 — cliente AR y pose cruda    | **Completada en POCO X7 Pro** | Ejes dirigidos, tracking 100 %, buffer 0, 0 inválidos y deriva estacionaria de 1,7 mm.             |
+| 4 — cámara e intrínsecos       | **Completada en POCO X7 Pro** | `camera-access`, textura real, gris a 10,2 Hz, intrínsecos estables y `hello` verificados.         |
+| 5 — detección de marcadores    | **Validación móvil parcial**  | 882 observaciones del ID 0 en pantalla; error medio 0,33 px y máximo 2,09 px.                      |
+| 6 — corrección de localización | **Implementada**              | Modos directo/suavizado, filtros y mensajes implementados; falta validación física.                |
+| 7 — visualización Foxglove     | **Completada**                | Layout de tres paneles validado en Foxglove Studio 3.6.0 y telemetría móvil recibida.              |
+| 8 — registro y evaluación      | **Parcial avanzada**          | Grabador y analizador implementados; falta analizar una corrida real y usar sus CSV en el informe. |
+| 9 — experimentos físicos       | **Preparada; pendiente**      | Guía creada; faltan mapa medido y al menos tres repeticiones por condición.                        |
+| 10 — documentación y entrega   | **En curso**                  | README, guías y evidencias actualizados; faltan resultados físicos, informe y video/demo.          |
 
 La Fase 0 se cerró el **2026-11-22** con un POCO X7 Pro. La CA de `mkcert` se
 instaló como CA de usuario, Chrome abrió `https://192.168.0.179:5173/` sin
@@ -33,9 +33,10 @@ La Fase 2 se verificó primero con el simulador y luego con telemetría real. El
 relay móvil acumuló 3502 mensajes válidos (3497 `pose`, 5 `hello`) y 0 inválidos;
 Foxglove se suscribió a los cinco tópicos.
 
-La Fase 3 mostró tracking estable a 27–30 FPS, conexión continua, buffer 0,
-movimiento visible en Foxglove y una deriva estacionaria de 1,7 mm en unos 30 s.
-Falta aislar avance, giro y altura para confirmar cuantitativamente cada eje.
+La Fase 3 mostró tracking estable, conexión continua y buffer 0. Las pruebas
+dirigidas confirmaron avance hacia `+world.x`, izquierda hacia `+world.y`,
+altura hacia `+world.z` y yaw derecho sobre `-world.z`, con 100 % de tracking y
+0 mensajes inválidos.
 
 En la Fase 4, el POCO entregó una textura de 864×1920 y una imagen procesada de
 288×640 a 10,2 Hz. La vista gris tuvo orientación correcta, los intrínsecos
@@ -48,23 +49,23 @@ En la Fase 4, el POCO entregó una textura de 864×1920 y una imagen procesada d
 | Comando             | Resultado                                         |
 | :------------------ | :------------------------------------------------ |
 | `pnpm typecheck`    | OK (`shared`, `client`, `server`).                |
-| `pnpm test`         | 115 tests aprobados.                              |
+| `pnpm test`         | 122 tests aprobados.                              |
 | `pnpm lint`         | OK, sin errores.                                  |
 | `pnpm build`        | OK (build multipágina en `packages/client/dist`). |
 | `pnpm format:check` | OK (tras Prettier).                               |
 | `git diff --check`  | OK.                                               |
 
-### Detalle de los tests (115 total al 2026-11-22)
+### Detalle de los tests (122 total al 2026-11-23)
 
 Desglose por paquete en la última ejecución:
 
 packages/shared: 6 archivos, 44 tests.
 
-packages/client: 8 archivos, 36 tests.
+packages/client: 9 archivos, 43 tests.
 
 packages/server: 6 archivos, 35 tests.
 
-Total: 20 archivos y 115 tests aprobados.
+Total: 21 archivos y 122 tests aprobados.
 
 | Archivo                                                 | Tests | Cobertura principal                                                                       |
 | :------------------------------------------------------ | :---: | :---------------------------------------------------------------------------------------- |
@@ -79,8 +80,9 @@ Total: 20 archivos y 115 tests aprobados.
 | `packages/client/src/camera-capture.test.ts`            |   5   | Tamaño de captura, aspect ratio y ausencia de `XRWebGLBinding`.                           |
 | `packages/client/src/camera-calibration.test.ts`        |   4   | Carga, 404, error HTTP/red y validación de esquema.                                       |
 | `packages/client/src/device-label.test.ts`              |   4   | Modelo Android y truncado a 256 chars.                                                    |
-| `packages/client/src/marker-detector.test.ts`           |   2   | AprilTag, `ArucoDetector`, `solvePnP` y filtros de error.                                 |
+| `packages/client/src/marker-detector.test.ts`           |   3   | API real de OpenCV.js 5, AprilTag, `ArucoDetector`, `solvePnP` y reproyección.            |
 | `packages/client/src/debug-overlay.test.ts`             |   2   | Proyección 3D→2D, contornos y ejes 3D en canvas.                                          |
+| `packages/client/src/rate-limit-clock.test.ts`          |   6   | Reloj de envío estable ante jitter y saltos de frames.                                    |
 | `packages/server/src/foxglove.test.ts`                  |   4   | ms→ns, JSON Schemas, TF, escena, métricas y snapshot inicial.                             |
 | `packages/server/src/ingest.test.ts`                    |   2   | Mensajes válidos, inválidos y binarios; rechazo de otras rutas WS.                        |
 | `packages/server/src/sim-client.test.ts`                |   7   | Argumentos, trayectorias círculo/cuadrado, deriva y `hello`.                              |
@@ -170,7 +172,7 @@ No se adjuntó una captura de pantalla en esta corrida; la confirmación visual 
 
 Con esto se cumplió el criterio de aceptación de la Fase 2. El 2026-11-06 también se verificó el relay con el servidor HTTPS real: el simulador usó wss://localhost:8443/ingest y la CA de mkcert sin --insecure.
 
-La validación posterior de la Fase 7 se documenta en la sección 7.4. El
+La validación posterior de la Fase 7 se documenta en la sección 8.4. El
 2026-11-22 también se recibió telemetría real del POCO: 3502 mensajes válidos,
 0 inválidos, 3497 `pose` y 5 `hello`.
 
@@ -242,8 +244,20 @@ Las capturas están en
 [`evidence/poco-x7-pro-stationary-start-2026-11-22.jpeg`](evidence/poco-x7-pro-stationary-start-2026-11-22.jpeg)
 y
 [`evidence/poco-x7-pro-stationary-end-2026-11-22.jpeg`](evidence/poco-x7-pro-stationary-end-2026-11-22.jpeg).
-Falta registrar por separado avance, giro y altura para cerrar la validación de
-los ejes.
+El **2026-11-23** se completaron cuatro corridas dirigidas:
+
+| Movimiento  | Resultado principal                                      |
+| ----------- | -------------------------------------------------------- |
+| Avance      | `Δworld ≈ [1,65, -0,07, 0,00] m`                         |
+| Izquierda   | `Δworld ≈ [0,20, 1,65, 0,01] m`                          |
+| Altura      | `Δworld ≈ [-0,05, 0,00, 0,55] m`                         |
+| Yaw derecho | `91,84°` alrededor de un eje `≈ [0,016, -0,005, -1,000]` |
+
+Todas las corridas tuvieron tracking 100 % y 0 mensajes inválidos. Con cámara a
+1 Hz y preview desactivado, la tasa de pose fue 26,55 Hz; con captura a 10 Hz
+fue 21,76 Hz, por lo que el procesamiento de cámara sigue siendo el principal
+límite de rendimiento. Evidencia estructurada:
+[`evidence/poco-x7-pro-physical-tests-2026-11-23.json`](evidence/poco-x7-pro-physical-tests-2026-11-23.json).
 
 ## 6. Verificación de la Fase 4
 
@@ -325,9 +339,27 @@ La captura está en
 La calibración propia queda como opción si la prueba física de PnP exige mayor
 precisión.
 
-## 7. Herramientas y artefactos
+## 7. Verificación de la Fase 5
 
-### 7.1. Marcadores
+El **2026-11-23** se mostró un AprilTag 36h11 ID 0 en una pantalla con margen
+blanco. El POCO X7 Pro cargó OpenCV.js 5 en el Web Worker y transmitió 882
+mensajes `marker` durante 107,45 s (8,21 observaciones/s):
+
+| Métrica                | Resultado                                                       |
+| ---------------------- | --------------------------------------------------------------- |
+| IDs observados         | 882 del ID 0                                                    |
+| Error de reproyección  | media 0,326 px; mediana 0,290 px; p90 0,562 px; máximo 2,092 px |
+| Distancia PnP estimada | media 0,629 m; rango 0,466–0,717 m                              |
+
+Esto valida detección, decodificación, esquinas, PnP y transmisión móvil. La
+precisión métrica de distancia todavía no está validada porque no se midió el
+tamaño físico visible del patrón en el monitor. Durante la prueba se corrigieron
+la dependencia de OpenCV.js 5, su API ArUco real, la selección de buffers
+32/64-bit, la carga comprimida del worker y el contador del overlay.
+
+## 8. Herramientas y artefactos
+
+### 8.1. Marcadores
 
 pnpm markers generó:
 
@@ -339,11 +371,11 @@ patrón de 16,0 cm de lado, zona de silencio de 2,0 cm y regla de control de 10,
 
 El PDF y los PNG son artefactos ignorados por git; se regeneran con el comando anterior. No se validó la impresión física ni el tamaño medido con regla.
 
-### 7.2. Mapa demo
+### 8.2. Mapa demo
 
 pnpm map:demo generó config/marker_map.json para una sala de 4 × 3 × 2,5 m con 6 marcadores. Los tests comprueban que las poses coinciden con markerPoseOnWall. El mapa es sintético: no se midió una sala real.
 
-### 7.3. Servidor
+### 8.3. Servidor
 
 El servidor actual:
 
@@ -363,7 +395,7 @@ acepta --http para pruebas de escritorio;
 
 incluye pnpm sim y el cliente móvil /ar.html como fuentes de telemetría.
 
-### 7.4. Validación del layout en Foxglove Studio 3.6.0
+### 8.4. Validación del layout en Foxglove Studio 3.6.0
 
 El 2026-11-22 se realizó una nueva validación visual en escritorio con Foxglove Studio 3.6.0, utilizando el servidor local en modo HTTP y el simulador de trayectorias.
 
@@ -397,7 +429,7 @@ La importación del layout se validó con datos sintéticos y, en una sesión
 posterior, Foxglove recibió los cinco tópicos de la telemetría real del POCO.
 Esto no demuestra todavía detección real de AprilTags ni corrección física.
 
-## 8. Verificación automática de la Fase 8
+## 9. Verificación automática de la Fase 8
 
 La grabación JSONL de la Fase 8 quedó implementada como una extensión opcional del servidor. Se activa exclusivamente con --record y no modifica el flujo del servidor sin esa opción.
 
@@ -440,7 +472,7 @@ El 2026-11-22 se ejecutaron nuevamente las verificaciones automatizadas:
 | Comando             | Resultado                     |
 | :------------------ | :---------------------------- |
 | `pnpm typecheck`    | OK.                           |
-| `pnpm test`         | 115 tests aprobados en total. |
+| `pnpm test`         | 122 tests aprobados en total. |
 | `pnpm lint`         | OK.                           |
 | `pnpm build`        | OK.                           |
 | `pnpm format:check` | OK.                           |
@@ -493,7 +525,7 @@ El cierre se realizó mediante SIGINT.
 
 Esta prueba valida el circuito de grabación con datos sintéticos, pero no demuestra la integración con ARCore, WebXR ni hardware Android real. No se probaron fallos reales de disco ni permisos del sistema de archivos.
 
-## 9. Verificaciones manuales
+## 10. Verificaciones manuales
 
 - [x] Certificados generados, reglas de firewall creadas y CA instalada en Android.
 - [x] Chrome Android abre la IP LAN sin advertencias.
@@ -504,8 +536,8 @@ Esta prueba valida el circuito de grabación con datos sintéticos, pero no demu
 - [x] `camera-access` entrega textura y gris a ≥10 Hz con orientación correcta.
 - [x] Los intrínsecos son estables y el servidor recibe `hello`.
 - [x] El layout de Foxglove 3.6.0 se importó y validó en escritorio.
-- [ ] Aislar avance, giro y altura para confirmar los signos de los ejes.
-- [ ] Detectar un AprilTag ID 0 y medir error de reproyección y distancia.
+- [x] Aislar avance, giro y altura para confirmar los signos de los ejes.
+- [x] Detectar un AprilTag ID 0 y medir error de reproyección y distancia estimada.
 - [ ] Validar PnP con un tamaño físico conocido.
 - [ ] Comparar los modos `off`, `direct` y `smooth` con recorridos repetibles.
 - [ ] Grabar y analizar una corrida móvil real.
@@ -541,11 +573,11 @@ byType.hello, ingest.devices y el image_size recibido en /health;
 
 si se usó config/camera_intrinsics.json, su image_size y el valor de camera_intrinsics.available en /health.
 
-La prueba de Foxglove del 2026-11-05 quedó registrada en la sección 4.3 con la versión 3.5.0. La validación posterior del layout de tres paneles con Foxglove Studio 3.6.0 quedó registrada en la sección 7.4. Para futuras corridas, agregar una captura del panel 3D con las dos trayectorias.
+La prueba de Foxglove del 2026-11-05 quedó registrada en la sección 4.3 con la versión 3.5.0. La validación posterior del layout de tres paneles con Foxglove Studio 3.6.0 quedó registrada en la sección 8.4. Para futuras corridas, agregar una captura del panel 3D con las dos trayectorias.
 
 No modificar los resultados automáticos sin volver a ejecutar los comandos.
 
-## 10. Limitaciones conocidas
+## 11. Limitaciones conocidas
 
 1. La validación móvil se realizó en un solo modelo, POCO X7 Pro; no demuestra
    compatibilidad con todos los Android compatibles con ARCore.
@@ -553,24 +585,24 @@ No modificar los resultados automáticos sin volver a ejecutar los comandos.
    feature opcional en WebXR.
 3. El emulador de Android Studio no implementa WebXR.
 4. El mapa actual es sintético y todavía no representa una sala medida.
-5. La Fase 3 conserva una prueba dirigida de ejes.
-6. Los intrínsecos derivados no se compararon con una calibración propia ni con
+5. Los intrínsecos derivados no se compararon con una calibración propia ni con
    distancias PnP conocidas.
-7. La detección, PnP y corrección todavía no tienen validación física.
-8. Falta una corrida móvil grabada para alimentar el analizador de la Fase 8.
-9. `@foxglove/ws-protocol` 0.8.0 está deprecado, pero se mantiene por decisión
+6. La detección y PnP se validaron con un marcador en pantalla, pero falta
+   precisión métrica con tamaño y distancia medidos; la corrección sigue pendiente.
+7. Falta una corrida móvil repetible para el informe de la Fase 8.
+8. `@foxglove/ws-protocol` 0.8.0 está deprecado, pero se mantiene por decisión
    del proyecto.
 
-## 11. Próximo paso
+## 12. Próximo paso
 
-1. Ejecutar la prueba dirigida de ejes: avance, giro y cambio de altura.
-2. Mostrar el AprilTag ID 0 en otra pantalla y validar detección/PnP.
-3. Probar corrección directa y suavizada con tamaño de marcador conocido.
-4. Grabar una corrida real y ejecutar `pnpm analyze` sobre el JSONL.
-5. Medir la sala y seguir `docs/phase-9-physical-tests.md`, con al menos tres
+1. Medir el tamaño visible del marcador y validar distancia PnP conocida.
+2. Medir la sala y reemplazar el mapa demo sintético.
+3. Probar corrección directa y suavizada con el mapa medido.
+4. Grabar recorridos repetibles y ejecutar `pnpm analyze` sobre cada JSONL.
+5. Seguir `docs/phase-9-physical-tests.md`, con al menos tres
    repeticiones por condición.
 6. Incorporar las tablas y gráficos al informe final y preparar el video/demo.
 
-Las fases 0, 1, 2, 4 y 7 están cerradas para el entorno probado. La Fase 3 está
-muy avanzada; las fases 5 y 6 necesitan marcador, y las fases 8 a 10 requieren
-la evaluación física y la entrega final.
+Las fases 0, 1, 2, 3, 4 y 7 están cerradas para el entorno probado. La Fase 5
+tiene validación móvil parcial; las fases 6 y 8 a 10 requieren el mapa medido,
+la evaluación repetible y la entrega final.

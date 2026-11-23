@@ -38,6 +38,9 @@
             </span>
             <span class="pill" id="session-state" data-status="pending">Sesión: inactiva</span>
             <span class="pill" id="ingest-state" data-status="pending">Relay: verificando…</span>
+            <span class="pill" id="detector-state" data-status="pending">
+              Detector: cargando…
+            </span>
           </div>
 
           <dl class="kv">
@@ -90,6 +93,11 @@
           <span>Estado: <strong id="overlay-camera-state">—</strong></span>
           <span>Imagen: <strong id="overlay-camera-size">—</strong></span>
           <span>Captura: <strong id="overlay-camera-fps">—</strong> Hz</span>
+        </div>
+        <div class="row">
+          <span
+            >Detector: <strong class="value" id="overlay-detector-state">cargando…</strong></span
+          >
         </div>
         <div class="row">
           <span>Intrínsecos: <strong class="value" id="overlay-intrinsics">—</strong></span>

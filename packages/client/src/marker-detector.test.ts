@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CameraIntrinsics } from '@vio/shared';
+import { createRequire } from 'node:module';
 import { MarkerDetector } from './marker-detector';
 
 /**
@@ -16,9 +17,10 @@ function createMockCV() {
     SOLVEPNP_IPPE_SQUARE: 11,
 
     getPredefinedDictionary: (_id: number) => ({ name: 'APRILTAG_36h11' }),
-    DetectorParameters: class {},
+    aruco_DetectorParameters: class {},
+    aruco_RefineParameters: class {},
 
-    ArucoDetector: class {
+    aruco_ArucoDetector: class {
       detectMarkers(_grayMat: any, cornersVector: any, idsMat: any, _rejectedVector: any) {
         // Simular 1 marcador detectado con ID 0
         idsMat.rows = 1;
@@ -122,4 +124,43 @@ describe('MarkerDetector', () => {
 
     expect(results).toHaveLength(1);
   });
+
+  it('encuentra la API AprilTag en el paquete OpenCV.js instalado', async () => {
+    const require = createRequire(import.meta.url);
+    const cv = await require('@techstark/opencv-js');
+
+    expect(cv.DICT_APRILTAG_36h11).toBeDefined();
+    expect(cv.getPredefinedDictionary).toBeTypeOf('function');
+    expect(cv.aruco_DetectorParameters).toBeTypeOf('function');
+    expect(cv.aruco_ArucoDetector).toBeTypeOf('function');
+
+    const dictionary = cv.getPredefinedDictionary(cv.DICT_APRILTAG_36h11);
+    const marker = new cv.Mat();
+    const image = new cv.Mat();
+    cv.generateImageMarker(dictionary, 0, 400, marker);
+    cv.copyMakeBorder(marker, image, 50, 50, 50, 50, cv.BORDER_CONSTANT, new cv.Scalar(255));
+
+    const detector = new MarkerDetector(cv, { defaultMarkerSize: 0.16 });
+    const results = detector.detect(new Uint8Array(image.data), image.cols, image.rows, {
+      fx: 500,
+      fy: 500,
+      cx: 250,
+      cy: 250,
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0].id).toBe(0);
+    expect(results[0].corners).toEqual([
+      [50, 50],
+      [449, 50],
+      [449, 449],
+      [50, 449],
+    ]);
+    expect(results[0].reproj_err_px).toBeLessThan(1);
+    expect(results[0].T_cam_marker.p[2]).toBeGreaterThan(0);
+
+    marker.delete();
+    image.delete();
+    dictionary.delete?.();
+  }, 30_000);
 });
