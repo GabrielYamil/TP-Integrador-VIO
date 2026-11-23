@@ -10,17 +10,19 @@ documentación y la interfaz están en español; el código y los tests en ingl�
 
 ## Estado actual
 
-| Fase                                | Estado                                                       |
-| ----------------------------------- | ------------------------------------------------------------ |
-| 0 — entorno, HTTPS y prueba AR      | Implementada en código. **Validación en celular pendiente.** |
-| 1 — matemática SE(3) y convenciones | Completada.                                                  |
-| 2 — relay y servidor Foxglove       | Completada. Validada en Foxglove Studio 3.5.0.               |
-| 3 — cliente WebXR y pose cruda      | Implementada en código. **Validación en celular pendiente.** |
-| 4 — cámara e intrínsecos            | Implementada en código. **Validación en celular pendiente.** |
-| 5 — detección de marcadores y PnP   | Implementada en código. **Validación en celular pendiente.** |
-| 6 — corrección de localización      | Implementada en código. **Validación en celular pendiente.** |
-| 7 — visualización en Foxglove       | Implementada (Estructura y guía de layout).                  |
-| 8 a 10                              | Pendientes.                                                  |
+| Fase | Estado |
+| :--- | :--- |
+| 0 — Entorno, HTTPS y prueba AR | Implementada. **Validación en celular pendiente.** |
+| 1 — Matemática SE(3) y convenciones | Completada. |
+| 2 — Relay y servidor Foxglove | Completada. Validada en escritorio. |
+| 3 — Cliente WebXR y pose cruda | Implementada. **Validación en celular pendiente.** |
+| 4 — Cámara e intrínsecos | Implementada. **Validación en celular pendiente.** |
+| 5 — Detección de marcadores y PnP | Implementada. **Validación física pendiente.** |
+| 6 — Corrección de localización | Implementada. **Validación física pendiente.** |
+| 7 — Visualización en Foxglove | Validada en escritorio con Foxglove Studio 3.6.0. |
+| 8 — Registro de recorridos | Completada. Grabación JSONL validada con datos sintéticos. |
+| 9 — Experimentos físicos | Preparada. **Ejecución pendiente.** |
+| 10 — Documentación | En curso. |                                                |
 
 La Fase 0 incluye el servidor HTTPS, el script de certificados, las páginas de
 diagnóstico WebXR y el modo mock de escritorio. Los certificados de mkcert se
@@ -29,11 +31,12 @@ en Android y validar `immersive-ar` y `camera-access` en un celular real.
 
 La Fase 2 incluye el relay `/ingest`, la validación zod de los mensajes, el
 servidor Foxglove en `:8765`, la publicación de TF, poses, marcadores y métricas,
-y un simulador de cliente. El circuito está cubierto por tests de integración y
-se validó visualmente en Foxglove Studio 3.5.0 el 2026-11-05: se vieron los cinco
-tópicos, los seis marcadores y las dos trayectorias. El relay por `wss` con el
-certificado de mkcert también se verificó localmente. Falta la telemetría real
-del celular y repetir el relay por la IP LAN. Ver `docs/results.md`.
+y un simulador de cliente. El circuito está cubierto por tests de integración.
+Se validó visualmente con Foxglove Studio 3.5.0 el 2026-11-05 y posteriormente
+con Foxglove Studio 3.6.0 el 2026-11-22, incluyendo un layout de tres paneles.
+El relay por `wss` con el certificado de mkcert también se verificó localmente.
+Falta la telemetría real del celular y repetir el relay por la IP LAN.
+Ver `docs/results.md`.
 
 La Fase 3 agrega `/ar.html`: sesión `immersive-ar`, reference space
 `local-floor` con fallback a `local`, overlay con tracking/FPS/conexión y envío
@@ -97,9 +100,9 @@ PC: servidor Node.js
 
 En las fases actuales existen el navegador, el servidor HTTPS, el relay
 `/ingest`, el servidor Foxglove, la matemática de poses, el mapa demo, el
-simulador, el cliente `/ar.html` y el Web Worker de detección de marcadores
-con OpenCV.js (Fase 5). La corrección de deriva llega en la Fase 6; hasta
-entonces, la pose corregida se deriva con `T_WORLD_ODOM_INITIAL`.
+simulador, el cliente `/ar.html`, el Web Worker de detección de marcadores
+con OpenCV.js (Fase 5), la corrección de localización (Fase 6) y el grabador
+de recorridos JSONL (Fase 8). Las pruebas físicas de la Fase 9 siguen pendientes.
 
 ## Estructura
 
@@ -109,10 +112,12 @@ entonces, la pose corregida se deriva con `T_WORLD_ODOM_INITIAL`.
 │   ├── marker_map.json        # mapa de marcadores de la sala demo
 │   └── camera_intrinsics.example.json  # calibración opcional (ejemplo)
 ├── docs/
-│   ├── setup.md               # instalación, HTTPS y checklist manual
-│   ├── conventions.md         # fuente de verdad de ejes y fórmulas
-│   ├── marker-map.md          # impresión y medición de marcadores
-│   └── results.md             # estado y resultados de validación
+│   ├── setup.md
+│   ├── conventions.md
+│   ├── marker-map.md
+│   ├── results.md
+│   └── phase-9-physical-tests.md
+│
 ├── packages/
 │   ├── shared/                # SE(3), convenciones, esquemas y mapa
 │   ├── client/                # Vite, WebXR y modo mock
@@ -208,8 +213,9 @@ En Foxglove Studio de escritorio:
 | `/markers`        | `foxglove.SceneUpdate`     | cubos, etiquetas y trayectorias                  |
 | `/metrics`        | `vio.Metrics`              | estado, FPS, latencia y corrección               |
 
-Todavía no hay layout exportado; el layout de la Fase 7 se versiona en
-`foxglove/`.
+El layout de tres paneles de Foxglove Studio se encuentra versionado en
+`foxglove/layout.json`. Su visualización se validó en escritorio con
+Foxglove Studio 3.6.0 el 2026-11-22.
 
 ### Modo mock
 
@@ -238,8 +244,8 @@ simulada en la convención de WebXR. No valida ARCore ni `camera-access`.
 | `pnpm sim`                          | Simulador de cliente contra `/ingest`.                        |
 | `pnpm preview`                      | `pnpm build` seguido de `pnpm start`.                         |
 | `pnpm typecheck`                    | TypeScript estricto en todos los paquetes.                    |
-| `pnpm test`                         | Vitest. En el estado actual: 18 archivos, 96 tests.           |
-| `pnpm lint`                         | ESLint.                                                       |
+| `pnpm test`                         | Vitest. Estado actual: 19 archivos, 110 tests.               |
+| `pnpm lint`                         | ESLint.
 | `pnpm format` / `pnpm format:check` | Prettier sobre el repo.                                       |
 | `pnpm cert:setup`                   | Genera certificados mkcert, exporta la CA y abre el firewall. |
 | `pnpm markers`                      | Genera los AprilTags y el PDF A4. Requiere Python.            |
@@ -315,11 +321,11 @@ pnpm format:check
 ```
 
 El estado de los tests automáticos y las verificaciones manuales pendientes se
-documenta en [`docs/results.md`](docs/results.md). En el estado actual hay 18
-archivos y 96 tests: 44 de `packages/shared`, 36 de `packages/client` y 16 de
-`packages/server`. La prueba en celular no se puede reemplazar con tests
-unitarios ni con el emulador. La conexión a Foxglove Studio se validó en
-escritorio; la telemetría real del celular sigue pendiente.
+documenta en [`docs/results.md`](docs/results.md). En la última ejecución
+documentada hay 19 archivos y 110 tests: 44 de `packages/shared`, 36 de
+`packages/client` y 30 de `packages/server`. La prueba en celular no se puede
+reemplazar con tests unitarios ni con el emulador. La conexión a Foxglove Studio
+se validó en escritorio; la telemetría real del celular sigue pendiente.
 
 ## Roadmap
 
@@ -336,7 +342,13 @@ escritorio; la telemetría real del celular sigue pendiente.
 6. **Fase 6:** implementada en código. Corrección de localización (`LocalizationCorrector`)
    con mapa de marcadores, estrategias directa y suavizada, filtrado de outliers,
    selector de modo en UI y transmisión de pose corregida a Foxglove.
-7. **Fases 7–10:** layout de Foxglove, métricas, experimentos en sala, documentación e informe final.
+7. **Fase 7:** completada y validada en escritorio con Foxglove Studio 3.6.0,
+   layout de tres paneles y datos del simulador.
+8. **Fase 8:** completada. Grabación JSONL implementada y validada con una
+   corrida sintética.
+9. **Fase 9:** guía de experimentos físicos creada. Falta ejecutar las pruebas
+   con un celular compatible con ARCore.
+10. **Fase 10:** actualización y cierre de la documentación del proyecto.
 
 ## Limitaciones conocidas
 
@@ -352,8 +364,9 @@ escritorio; la telemetría real del celular sigue pendiente.
   celular real aún no se validaron.
 - `camera-access` es opcional. Si el dispositivo no lo habilita, `/ar.html`
   sigue funcionando solo con VIO y las Fases 4 y 5 quedan bloqueadas.
-- Foxglove Studio se validó en escritorio con la versión 3.5.0; falta la
-  telemetría real del celular y una captura de evidencia.
+- Foxglove Studio se validó en escritorio con las versiones 3.5.0 y 3.6.0.
+  El layout de tres paneles está versionado; falta la telemetría real del
+  celular y una captura de evidencia.
 - El mapa actual es sintético; no se midió una sala real.
 - `@foxglove/ws-protocol` está deprecado, aunque se mantiene la versión elegida
   por el plan.
