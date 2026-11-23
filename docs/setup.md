@@ -552,22 +552,22 @@ el tráfico sigue pasando por el cable USB.
 
 - [x] `pnpm install` sin errores.
 - [x] `pnpm cert:setup` ejecutado y certificados generados con mkcert.
-- [ ] Reglas de firewall para 5173, 8443 y 8765 creadas en PowerShell elevado.
-- [ ] CA instalada en Android como CA de usuario.
-- [ ] `https://IP_DE_LA_PC:5173/` abre sin advertencia.
+- [x] Reglas de firewall para 5173, 8443 y 8765 creadas en PowerShell elevado.
+- [x] CA instalada en Android como CA de usuario.
+- [x] `https://IP_DE_LA_PC:5173/` abre sin advertencia.
 - [x] `/health` responde por HTTPS con `tls: true` y certificado válido.
-- [ ] `/ar-test.html` inicia una sesión `immersive-ar`.
-- [ ] La sesión entrega tracking y FPS.
-- [ ] Se conoce el estado de `camera-access`.
-- [ ] Reporte de la prueba guardado en `docs/results.md`.
+- [x] `/ar-test.html` inicia una sesión `immersive-ar`.
+- [x] La sesión entrega tracking y FPS.
+- [x] Se conoce el estado de `camera-access`.
+- [x] Reporte de la prueba guardado en `docs/evidence/` y `docs/results.md`.
 
-La Fase 0 queda cerrada cuando todos los ítems anteriores tienen un resultado
-explícito. La Fase 1 (matemática y convenciones) ya está cubierta por tests
-automáticos; ver `docs/results.md`.
+La Fase 0 quedó cerrada el **2026-11-22** en un POCO X7 Pro. La Fase 1
+(matemática y convenciones) está cubierta por tests automáticos; ver
+`docs/results.md`.
 
 ### Checklist de Fase 2
 
-- [x] `pnpm test` pasa los 13 tests de la Fase 2 (16 actuales del servidor).
+- [x] `pnpm test` pasa los tests de relay y Foxglove (35 actuales del servidor).
 - [x] `/health` muestra los bloques `ingest` y `foxglove`.
 - [x] `pnpm sim` envía poses y `messagesValid` aumenta.
 - [x] Foxglove Studio se conecta a `ws://IP_DE_LA_PC:8765`.
@@ -576,11 +576,9 @@ automáticos; ver `docs/results.md`.
 - [x] `/metrics` muestra tracking, FPS y latencia de procesamiento.
 - [x] La prueba se registra en `docs/results.md`.
 
-La Fase 2 quedó cerrada el **2026-11-05** con Foxglove Studio **3.5.0**. El
-relay con HTTPS real y mkcert se verificó el **2026-11-06** con el simulador.
-Queda pendiente la telemetría del celular y repetir el relay por la IP LAN. La
-validación móvil de la Fase 0 sigue pendiente y se retoma cuando haya un celular
-ARCore disponible.
+La Fase 2 quedó cerrada con el simulador y Foxglove; el **2026-11-22** se agregó
+la verificación por IP LAN con telemetría real del POCO y cinco tópicos
+suscritos.
 
 ### Checklist de Fase 3
 
@@ -588,45 +586,43 @@ ARCore disponible.
 - [x] `pnpm test` pasa los 7 tests originales del cliente.
 - [x] El relay acepta un mensaje `pose` crudo sin `hello` (1 válido, 0 inválidos).
 - [x] El cliente reconecta, bufferiza y descarta mensajes viejos (tests).
-- [ ] `/ar.html` inicia una sesión `immersive-ar` en el celular.
-- [ ] El overlay muestra tracking, FPS, conexión y mensajes enviados.
-- [ ] La pose cruda llega a `/health` y a Foxglove (`/pose/raw`, `/tf`).
-- [ ] La pose se mueve con fluidez y a una frecuencia cercana a 30 Hz.
+- [x] `/ar.html` inicia una sesión `immersive-ar` en el celular.
+- [x] El overlay muestra tracking, FPS, conexión y mensajes enviados.
+- [x] La pose cruda llega a `/health` y a Foxglove (`/pose/raw`, `/tf`).
+- [x] La pose se mueve con fluidez y a una frecuencia cercana a 30 Hz.
 - [ ] Avanzar, girar y cambiar de altura producen el movimiento esperado en
       `world`.
-- [ ] La prueba se registra en `docs/results.md`.
+- [x] La prueba se registra en `docs/results.md`.
 
-La Fase 3 está implementada en código y cubierta por tests de transporte, pero
-el criterio de aceptación depende de la prueba en el celular. No se declara
-cerrada hasta completar los ítems pendientes.
+La Fase 3 tiene validación móvil avanzada. Solo falta aislar avance, giro y
+altura y registrar el signo de cada eje para cerrarla sin reservas.
 
 ### Checklist de Fase 4
 
 - [x] La captura compila y se incluye en el build multipágina.
-- [x] `pnpm test` pasa los 85 tests (44 shared + 25 client + 16 server).
+- [x] `pnpm test` pasa los 115 tests (44 shared + 36 client + 35 server).
 - [x] El endpoint `/config/camera_intrinsics.json` responde 404 sin archivo.
 - [x] Con una calibración válida responde 200 y `/health` marca
       `camera_intrinsics.available: true`.
 - [x] Los tests cubren tamaño de captura, derivación de intrínsecos, escalado,
       calibración, etiqueta del dispositivo y `hello` tras reconexión.
-- [ ] `camera-access` se habilita en el celular y `getCameraImage` devuelve una
+- [x] `camera-access` se habilita en el celular y `getCameraImage` devuelve una
       textura.
-- [ ] La vista previa en gris se ve a ≥10 Hz y con orientación correcta.
-- [ ] Los intrínsecos del overlay son estables y corresponden a la imagen
+- [x] La vista previa en gris se ve a ≥10 Hz y con orientación correcta.
+- [x] Los intrínsecos del overlay son estables y corresponden a la imagen
       procesada.
-- [ ] El servidor recibe `hello` (`byType.hello > 0`) con el dispositivo y
+- [x] El servidor recibe `hello` (`byType.hello > 0`) con el dispositivo y
       `image_size` correctos.
 - [ ] Con una calibración propia, el cliente usa `Fuente: calibración` y los
       valores escalados.
-- [ ] La prueba se registra en `docs/results.md`.
+- [x] La prueba se registra en `docs/results.md`.
 
-La Fase 4 está implementada en código y verificada en la PC hasta el endpoint y
-los tests. El criterio de aceptación —imagen gris visible a ≥10 Hz con
-orientación correcta— requiere un celular con `camera-access`. No se declara
-cerrada hasta completar los ítems pendientes.
+La Fase 4 quedó aceptada para el POCO X7 Pro el **2026-11-22**. La calibración
+propia es opcional y se recomienda solo si la validación física de PnP revela
+una precisión insuficiente.
 
 ### Checklist de Fase 5 en adelante
 
-No iniciar la Fase 5 hasta aceptar la Fase 4 en un celular real. La detección
-AprilTag necesita la textura, los intrínsecos y la orientación de la imagen ya
-validados.
+Las fases 5 y 6 ya están implementadas. La siguiente prueba manual es mostrar
+un AprilTag conocido en otra pantalla, validar detección/PnP y después comparar
+los modos de corrección.

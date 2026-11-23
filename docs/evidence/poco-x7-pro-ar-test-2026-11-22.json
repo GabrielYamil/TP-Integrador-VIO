@@ -1,0 +1,23 @@
+{
+  "generatedAt": "2026-11-22T19:06:55.410Z",
+  "url": "https://192.168.0.179:5173/ar-test.html",
+  "device": "POCO X7 Pro",
+  "androidVersion": "not_confirmed",
+  "secureContext": true,
+  "userAgent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+  "immersiveArSupported": true,
+  "sessionStartedAtReportTime": false,
+  "sessionStartedNote": "El reporte se copio despues de detener la sesion; frames, pose y textura confirman que la sesion se ejecuto.",
+  "enabledFeatures": ["local", "camera-access", "viewer", "dom-overlay", "local-floor"],
+  "referenceSpace": "local-floor",
+  "trackingAtReportTime": "unknown",
+  "cameraAccess": "enabled",
+  "cameraImage": {
+    "width": 864,
+    "height": 1920
+  },
+  "frames": 425,
+  "fpsAtReportTime": 0,
+  "lastPose": "p=[0.0099, 1.1949, 0.0036] q=[-0.4374, 0.1243, 0.0558, 0.8889]",
+  "errors": []
+}

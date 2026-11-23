@@ -233,51 +233,42 @@ inválidos con log.
 
 ## 5. Estado actual
 
-Fecha de referencia: **2026-11-07**.
+Fecha de referencia: **2026-11-22**.
 
-- **Fase 0:** implementada en código (monorepo, servidor HTTPS, certificados,
-  páginas de diagnóstico, mock y documentación). Los certificados de mkcert se
-  generaron el 2026-11-06 y el HTTPS local está verificado. La validación en
-  celular real está **pendiente**: falta instalar la CA en Android, crear las
-  reglas de firewall y obtener un reporte de `immersive-ar` y `camera-access`.
+- **Fase 0:** completada en un POCO X7 Pro. La CA de mkcert está instalada en
+  Android; HTTPS por LAN, `immersive-ar`, `local-floor` y `camera-access` se
+  validaron. El reporte está en
+  `docs/evidence/poco-x7-pro-ar-test-2026-11-22.json`.
 - **Fase 1:** completada. El paquete `shared` acumula 44 tests en 6 archivos e
   incluye el caso sintético de corrección con deriva y error menor a `1e-6`.
-- **Fase 2:** implementada en código a pedido del usuario, sin esperar el cierre
-  de la Fase 0. Incluye el relay `/ingest`, la validación zod, el servidor
-  Foxglove en `:8765`, los canales `/tf`, `/pose/*`, `/markers` y `/metrics`, y
-  el simulador `pnpm sim`. Los 13 tests originales del servidor pasan; hoy el
-  paquete acumula 16. La validación visual en Foxglove Studio 3.5.0 se completó
-  el 2026-11-05 y el relay por `wss` con mkcert se verificó el 2026-11-06. La
-  telemetría real del celular sigue **pendiente**.
-- **Fase 3:** implementada en código a pedido explícito del usuario. Incluye
+- **Fase 2:** completada. Incluye el relay `/ingest`, validación zod, servidor
+  Foxglove en `:8765`, cinco tópicos y simulador. El 2026-11-22 recibió
+  telemetría real del POCO: 3502 mensajes válidos, 0 inválidos, 3497 `pose` y
+  5 `hello`; Foxglove se suscribió a los cinco tópicos.
+- **Fase 3:** implementada y con validación móvil avanzada. Incluye
   `/ar.html`, sesión `immersive-ar` con `local-floor` y fallback a `local`,
   overlay de tracking/FPS/conexión, envío de pose cruda en `odom` a 30 Hz y el
   cliente WebSocket con reconexión, buffer de 120 mensajes y descarte a los 3 s.
-  Los 7 tests originales del cliente pasan; hoy el paquete acumula 25. El relay
-  aceptó un `pose` crudo sin `hello` el 2026-11-07. La validación en celular de
-  fluidez, tracking y ejes sigue **pendiente**, así que la fase no está aceptada.
-- **Fase 4:** implementada en código a pedido explícito del usuario, sin esperar
-  la aceptación de la Fase 3. Incluye:
-  - captura de `XRWebGLBinding.getCameraImage` a `cameraHz` (10 Hz por defecto);
-  - reducción en GPU a un framebuffer con lado mayor `maxDimension` (640 px por
-    defecto), conversión a gris con origen top-left y vista previa en el overlay;
-  - intrínsecos derivados de `XRView.projectionMatrix` o, si existe, cargados
-    de `config/camera_intrinsics.json` y escalados a la imagen procesada;
-  - endpoint `/config/camera_intrinsics.json` en el servidor (404 si falta,
-    503 si es inválido) y proxy de Vite;
-  - mensaje `hello` con `image_size` e `intrinsics`, reenviado al reconectar.
-    El 2026-11-07 se verificó en la PC el endpoint (404 sin archivo, 200 con el
-    ejemplo) y los 85 tests pasan. La captura real, la orientación de la imagen y
-    la estabilidad de los intrínsecos **no se validaron en celular**, así que la
-    fase no está aceptada.
-- **Fase 7:** implementada la estructura del directorio `foxglove/` y la documentación detallada `docs/foxglove.md` con los pasos para armar, exportar (`foxglove/layout.json`) e importar el layout de visualización 3D y métricas en Foxglove Studio.
-- No hay datos de corridas reales ni mapa medido en una
-  sala real. La validación móvil de las fases 0, 3 y 4 se retoma cuando haya un
-  celular ARCore disponible.
+  En el POCO se observaron 27–30 FPS, buffer 0, pose fluida en Foxglove y deriva
+  estacionaria de 1,7 mm en ~30 s. Falta una prueba dirigida de avance, giro y
+  altura para cerrar los signos de los ejes.
+- **Fase 4:** completada para el POCO X7 Pro. `camera-access` entregó una textura
+  864×1920; el cliente produjo gris 288×640 a 10,2 Hz con orientación correcta,
+  intrínsecos estables `[487.7, 487.6, 144.0, 320.0]` y mensajes `hello`.
+- **Fases 5 y 6:** implementadas y cubiertas por tests, pero todavía sin
+  validación física con marcador conocido.
+- **Fase 7:** completada. El layout de tres paneles en `foxglove/layout.json`
+  fue importado y validado con Foxglove Studio 3.6.0; también se recibieron los
+  cinco tópicos de la telemetría real del POCO.
+- **Fase 8:** grabador JSONL y `tools/analyze_run.ts` implementados. El
+  analizador exporta métricas JSON y CSV; falta procesar una corrida real e
+  incorporar sus tablas/gráficos al informe.
+- **Fases 9 y 10:** faltan mapa de sala medido, repeticiones experimentales,
+  resultados finales, informe y video/demo.
 
-Las verificaciones pendientes están enumeradas en `docs/results.md` y en el
-checklist de `docs/setup.md`. El agente no debe inventar resultados de pruebas
-en celular.
+Las verificaciones pendientes están enumeradas en `docs/validation-plan.md`,
+`docs/results.md` y el checklist de `docs/setup.md`. El agente no debe inventar
+resultados manuales ni cerrar una fase solo porque el código exista.
 
 ## 6. Reglas de trabajo
 

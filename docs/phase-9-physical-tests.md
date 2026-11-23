@@ -195,7 +195,7 @@ No cambiar varias condiciones simultáneamente si se busca identificar cuál afe
 Completar una ficha por cada ejecución.
 
 | Dato                 | Qué registrar                                                 |
-| :------------------  | :------------------------------------------------------------ |
+| :------------------- | :------------------------------------------------------------ |
 | Identificador        | Número de ejecución.                                          |
 | Fecha y hora         | Momento de la prueba.                                         |
 | Estrategia           | `off`, `direct` o `smooth`.                                   |
@@ -217,7 +217,11 @@ No estimar mediciones que no se hayan realizado.
 
 ## 7. Registro de ejecuciones
 
-Si se desea conservar los mensajes enviados al servidor en archivos JSONL, iniciar el servidor con la opción de grabación --record, siguiendo el mecanismo disponible en el proyecto.
+Para conservar los mensajes en JSONL, iniciar el servidor con `--record`:
+
+```powershell
+pnpm start -- --record
+```
 
 Los archivos generados deben conservarse junto con sus manifiestos. No sobrescribir ni eliminar ejecuciones anteriores.
 
@@ -225,21 +229,32 @@ Para cada archivo, anotar qué estrategia y qué recorrido representa. El grabad
 
 Los registros permiten analizar mensajes, tiempos y poses recibidas, pero no reemplazan las mediciones físicas de referencia. La comparación de error de cierre y posición real requiere mediciones externas.
 
+Al terminar cada recorrido, cerrar el servidor de forma controlada y ejecutar:
+
+```powershell
+pnpm analyze -- data/runs/<corrida>.jsonl
+```
+
+Conservar `metrics.json`, `trajectory.csv` y `checkpoints.csv` junto con la
+ficha del experimento. El error de cierre calculado por el analizador mide la
+diferencia entre la primera y la última pose estimada; no reemplaza la medición
+física en centímetros.
+
 ## 8. Tabla de resultados
 
 Completar una tabla por estrategia:
 
-| Estrategia  | Repetición | Error de cierre | FPS | Latencia | Observaciones |
-| :---------- | :--------: | :-------------: | :-: | :------: | :------------ |
-| `off`       |     1      |        —        |  —  |    —     |               |
-| `off`       |     2      |        —        |  —  |    —     |               |
-| `off`       |     3      |        —        |  —  |    —     |               |
-| `direct` (A)|     1      |        —        |  —  |    —     |               |
-| `direct` (A)|     2      |        —        |  —  |    —     |               |
-| `direct` (A)|     3      |        —        |  —  |    —     |               |
-| `smooth` (B)|     1      |        —        |  —  |    —     |               |
-| `smooth` (B)|     2      |        —        |  —  |    —     |               |
-| `smooth` (B)|     3      |        —        |  —  |    —     |               |
+| Estrategia   | Repetición | Error de cierre | FPS | Latencia | Observaciones |
+| :----------- | :--------: | :-------------: | :-: | :------: | :------------ |
+| `off`        |     1      |        —        |  —  |    —     |               |
+| `off`        |     2      |        —        |  —  |    —     |               |
+| `off`        |     3      |        —        |  —  |    —     |               |
+| `direct` (A) |     1      |        —        |  —  |    —     |               |
+| `direct` (A) |     2      |        —        |  —  |    —     |               |
+| `direct` (A) |     3      |        —        |  —  |    —     |               |
+| `smooth` (B) |     1      |        —        |  —  |    —     |               |
+| `smooth` (B) |     2      |        —        |  —  |    —     |               |
+| `smooth` (B) |     3      |        —        |  —  |    —     |               |
 
 Las unidades deben indicarse: error de cierre en centímetros, FPS en cuadros por segundo y latencia en milisegundos.
 
