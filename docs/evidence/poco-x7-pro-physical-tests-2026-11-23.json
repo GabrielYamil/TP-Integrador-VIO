@@ -146,5 +146,74 @@
       "p95": 1035.4,
       "note": "Includes a roughly constant client/server timestamp offset and must not be interpreted as network latency alone."
     }
+  },
+  "phase9_physical_experiments": {
+    "status": "passed in a controlled single-marker physical setup",
+    "protocol": "closed out-and-back path; same start/end pose; three repetitions per strategy",
+    "strategies": {
+      "off": {
+        "runs": [
+          "20261124T000057644Z-064043ee",
+          "20261124T001126713Z-ca071777",
+          "20261124T001407098Z-f5871917"
+        ],
+        "raw_closure_cm": [26.96, 2.53, 5.83],
+        "median_raw_closure_cm": 5.83,
+        "median_pose_rate_hz": 26.57,
+        "median_marker_visibility_percent": 94.46
+      },
+      "direct": {
+        "runs": [
+          "20261124T001539803Z-36689257",
+          "20261124T001754913Z-52d52d9b",
+          "20261124T002000387Z-223e961d"
+        ],
+        "raw_closure_cm": [13.56, 3.39, 2.15],
+        "stable_corrected_closure_cm": [7.87, 2.83, 4.49],
+        "median_raw_closure_cm": 3.39,
+        "median_corrected_closure_cm": 4.49,
+        "accepted_corrections": [177, 168, 171]
+      },
+      "smooth": {
+        "runs": [
+          "20261124T002130970Z-1e94a471",
+          "20261124T002507642Z-753323cb",
+          "20261124T002644764Z-61c20ea3"
+        ],
+        "raw_closure_cm": [5.07, 0.79, 2.36],
+        "stable_corrected_closure_cm": [5.88, 1.99, 4.71],
+        "median_raw_closure_cm": 2.36,
+        "median_corrected_closure_cm": 4.71,
+        "accepted_corrections": [271, 336, 221]
+      }
+    },
+    "conditions": {
+      "distance_1_2_m": {
+        "run": "20261124T002828999Z-132dba21",
+        "pnp_distance_m": [1.09, 1.1, 1.11],
+        "marker_observations": [234, 108, 105],
+        "tracking_percent": [100, 100, 100]
+      },
+      "oblique_45_deg": {
+        "run": "20261124T003244508Z-1021a9e5",
+        "pnp_distance_m": [0.83, 0.82, 0.82],
+        "marker_observations": [239, 112, 117],
+        "tracking_percent": [100, 100, 100]
+      },
+      "low_ambient_light": {
+        "run": "20261124T003824780Z-63af40cb",
+        "pnp_distance_m": [0.61, 0.61, 0.61],
+        "marker_observations": [93, 97, 107],
+        "tracking_percent": [100, 100, 100]
+      },
+      "partial_occlusion_25_percent": {
+        "run": "20261124T004043090Z-2142e49f",
+        "marker_observations": [0, 0, 0],
+        "accepted_corrections": [0, 0, 0],
+        "tracking_percent": [100, 100, 100]
+      }
+    },
+    "conclusion": "All required repetitions were recorded. Direct and smooth corrections behaved as designed, but did not consistently reduce closure error on this short, well-tracked path. Partial occlusion prevented tag detection while WebXR tracking remained active.",
+    "limitation": "Controlled one-marker screen setup; results do not generalize to a multi-marker room or a printed marker under low light."
   }
 }

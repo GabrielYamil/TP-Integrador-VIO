@@ -244,19 +244,31 @@ física en centímetros.
 
 Completar una tabla por estrategia:
 
-| Estrategia   | Repetición | Error de cierre | FPS | Latencia | Observaciones |
-| :----------- | :--------: | :-------------: | :-: | :------: | :------------ |
-| `off`        |     1      |        —        |  —  |    —     |               |
-| `off`        |     2      |        —        |  —  |    —     |               |
-| `off`        |     3      |        —        |  —  |    —     |               |
-| `direct` (A) |     1      |        —        |  —  |    —     |               |
-| `direct` (A) |     2      |        —        |  —  |    —     |               |
-| `direct` (A) |     3      |        —        |  —  |    —     |               |
-| `smooth` (B) |     1      |        —        |  —  |    —     |               |
-| `smooth` (B) |     2      |        —        |  —  |    —     |               |
-| `smooth` (B) |     3      |        —        |  —  |    —     |               |
+| Estrategia   | Repetición | Error de cierre |  FPS  | Latencia  | Observaciones                       |
+| :----------- | :--------: | :-------------: | :---: | :-------: | :---------------------------------- |
+| `off`        |     1      |    26,96 cm     | 26,57 | ≈1026 ms* | cierre crudo; tracking 100 %        |
+| `off`        |     2      |     2,53 cm     | 27,35 | ≈1033 ms* | cierre crudo; tracking 100 %        |
+| `off`        |     3      |     5,83 cm     | 25,74 | ≈1035 ms* | cierre crudo; tracking 100 %        |
+| `direct` (A) |     1      |     7,87 cm     | 26,45 | ≈1037 ms* | cierre corregido estable; 177 corr. |
+| `direct` (A) |     2      |     2,83 cm     | 26,55 | ≈1041 ms* | cierre corregido estable; 168 corr. |
+| `direct` (A) |     3      |     4,49 cm     | 27,31 | ≈1045 ms* | cierre corregido estable; 171 corr. |
+| `smooth` (B) |     1      |     5,88 cm     | 27,69 | ≈1048 ms* | cierre corregido estable; 271 corr. |
+| `smooth` (B) |     2      |     1,99 cm     | 28,91 | ≈1038 ms* | cierre corregido estable; 336 corr. |
+| `smooth` (B) |     3      |     4,71 cm     | 27,52 | ≈1052 ms* | cierre corregido estable; 221 corr. |
 
 Las unidades deben indicarse: error de cierre en centímetros, FPS en cuadros por segundo y latencia en milisegundos.
+
+\* La latencia contiene un offset casi constante entre los relojes del cliente y
+el servidor; no representa latencia de red aislada.
+
+### Condiciones variables registradas
+
+| Condición                 | Repeticiones | Resultado                                        |
+| ------------------------- | :----------: | ------------------------------------------------ |
+| Distancia 1,20 m          |      3       | PnP 1,09–1,11 m; tracking 100 %                  |
+| Ángulo oblicuo ≈45°       |      3       | PnP 0,82–0,83 m; tracking 100 %                  |
+| Iluminación ambiente baja |      3       | PnP 0,61 m; tracking 100 %                       |
+| Oclusión parcial ≈25 %    |      3       | 0 detecciones/correcciones; tracking WebXR 100 % |
 
 ## 9. Criterios de aceptación
 
@@ -310,6 +322,9 @@ Los valores de FPS y latencia deben interpretarse según los datos efectivamente
 
 No se deben completar tablas con resultados supuestos o generados artificialmente.
 
-Estado de la Fase 9: pendiente de validación física con un dispositivo Android compatible con ARCore.
+Estado de la Fase 9: **validada en un montaje físico controlado de un marcador**
+con POCO X7 Pro. Se completaron tres recorridos por estrategia y tres
+repeticiones por condición. La generalización a una sala multimarcador continúa
+como limitación documentada, no como resultado supuesto.
 
-Una vez realizadas las pruebas, incorporar los resultados al informe final de la Fase 10.
+Los resultados se incorporaron a `docs/final-report.md` para la Fase 10.
