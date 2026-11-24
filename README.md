@@ -341,8 +341,9 @@ emulador no las reemplaza. El plan restante está resumido en
    intrínsecos derivados estimaron 56,26 cm (error −6,23 %).
 3. **Fase 6:** completada con el marcador ID 0 del mapa controlado. Directo emitió
    correcciones, suavizado redujo su magnitud 86–88 % y Off dejó de emitirlas sin
-   perder detecciones. Para una referencia física de 60 cm, la pose corregida
-   quedó a 59 cm del marcador. El mapa completo de sala corresponde a la Fase 9.
+   perder detecciones. La pose absoluta controlada fue `[0,023, 0,627, 1,154] m`
+   frente a `[0,000, 0,600, 1,200] m` (error 3D de 5,8 cm). El mapa completo de
+   sala corresponde a la Fase 9.
 4. **Fase 8:** grabar y analizar una corrida real con `pnpm analyze`.
 5. **Fase 9:** ejecutar la guía de experimentos físicos con al menos tres
    repeticiones por condición.

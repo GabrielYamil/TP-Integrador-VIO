@@ -360,6 +360,17 @@ prueba se corrigieron la dependencia de OpenCV.js 5, su API ArUco real, la
 selección de buffers 32/64-bit, la carga comprimida del worker y el contador del
 overlay.
 
+### 7.1. Validación de corrección absoluta de la Fase 6
+
+Se cargó un mapa físico controlado con el marcador ID 0 a 1,20 m del piso y el
+origen directamente debajo de su centro. Con la lente medida a 1,20 m de altura
+y 0,60 m delante del marcador, la posición esperada era
+`[0,000, 0,600, 1,200] m`. Sobre 206 poses, 79 observaciones del marcador y 79
+correcciones aceptadas, la mediana corregida fue `[0,023, 0,627, 1,154] m`:
+2,3 cm de error lateral, 2,7 cm en profundidad, −4,6 cm en altura y 5,8 cm de
+error 3D. La reproyección mediana fue 0,559 px. Junto con las pruebas de Directo,
+Suavizado y Off, esto cierra la Fase 6 en el mapa controlado.
+
 ## 8. Herramientas y artefactos
 
 ### 8.1. Marcadores

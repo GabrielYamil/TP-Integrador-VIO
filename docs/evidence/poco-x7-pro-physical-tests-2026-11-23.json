@@ -87,7 +87,7 @@
   },
   "phase6_screen_integration": {
     "status": "passed with a controlled known-marker map",
-    "run": "20261123T170438365Z-01eb963b.jsonl",
+    "mode_validation_run": "20261123T170438365Z-01eb963b.jsonl",
     "marker_id": 0,
     "direct": {
       "accepted_corrections": 55,
@@ -108,10 +108,20 @@
       "window_s": 5
     },
     "absolute_pose_check": {
-      "configured_marker_position_m": [3.0, 0.0, 1.2],
-      "median_corrected_camera_position_m": [3.0, 0.59, 1.11],
+      "run": "20261123T231711844Z-cb4ba7a6.jsonl",
+      "map_origin": "floor directly below marker center",
+      "configured_marker_position_m": [0.0, 0.0, 1.2],
+      "expected_camera_position_m": [0.0, 0.6, 1.2],
+      "median_corrected_camera_position_m": [0.023, 0.627, 1.154],
+      "axis_error_cm": [2.3, 2.7, -4.6],
+      "absolute_3d_error_cm": 5.8,
       "reference_camera_distance_m": 0.6,
-      "result": "Corrected depth was 0.59 m for a measured 0.60 m reference; lateral and vertical coordinates were coherent with the observed offset from marker center."
+      "pnp_distance_m": 0.6299,
+      "accepted_corrections": 79,
+      "pose_observations": 206,
+      "marker_observations": 79,
+      "median_reprojection_error_px": 0.5587,
+      "result": "Absolute corrected pose passed in the controlled physical map with 5.8 cm 3D error."
     },
     "limitation": "A complete measured-room map and multi-condition repetitions belong to Phase 9."
   }
