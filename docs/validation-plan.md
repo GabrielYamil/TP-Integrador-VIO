@@ -18,15 +18,14 @@ detallada está en [`results.md`](results.md) y en [`evidence/`](evidence/).
 | 5 — AprilTag y PnP            | **Completada en POCO X7 Pro**              | Tag de 16 cm a 60 cm; error −6,23 %; reproyección 0,28 px; ejes coherentes                 | Calibración propia opcional si se necesita mayor precisión                               |
 | 6 — corrección                | **Completada en mapa controlado**          | Directo/suavizado/Off; posición absoluta con error 3D de 5,8 cm                            | Nada del criterio principal; el mapa completo de sala corresponde a la Fase 9            |
 | 7 — Foxglove                  | **Completada**                             | Layout importado y validado en Foxglove Studio 3.6.0; cinco tópicos y telemetría real      | Guardar una captura final para el informe                                                |
-| 8 — registro y evaluación     | **Parcial avanzada**                       | Grabador JSONL, analizador con 5 tests y exportación JSON/CSV                              | Grabar y analizar una corrida real; incorporar tabla y gráficos al informe               |
+| 8 — registro y evaluación     | **Completada**                             | Corrida real: 724 poses, 26,57 Hz, tracking 100 %, cierre crudo 26,96 cm                   | Usar los resultados locales para los gráficos de la Fase 10                              |
 | 9 — pruebas de sala           | **Pendiente**                              | Mapa demo sintético                                                                        | Medir una sala, instalar marcadores y repetir cada condición al menos 3 veces            |
 | 10 — entrega                  | **Parcial**                                | README y documentación técnica                                                             | Informe final, resultados cuantitativos y video/demo                                     |
 
 ## Orden recomendado
 
-1. Grabar recorridos repetibles, ejecutar `pnpm analyze` e incorporar los CSV al informe.
-2. Medir la sala real y reemplazar el mapa demo para la Fase 9.
-3. Ejecutar las repeticiones de la Fase 9 y preparar la entrega.
+1. Medir la sala real y reemplazar el mapa demo para la Fase 9.
+2. Ejecutar las repeticiones de la Fase 9 y preparar la entrega.
 
 ## Criterio de evidencia
 

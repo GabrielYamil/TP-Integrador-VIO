@@ -8,19 +8,19 @@ físicas, cuya ejecución está pendiente.
 
 ## Resumen
 
-| Fase                           | Estado                        | Observación                                                                                        |
-| ------------------------------ | ----------------------------- | -------------------------------------------------------------------------------------------------- |
-| 0 — entorno y HTTPS            | **Completada**                | CA instalada en POCO X7 Pro; HTTPS LAN, `immersive-ar`, `local-floor` y sesión real verificados.   |
-| 1 — matemática y convenciones  | **Completada**                | 44 tests de matemática, convenciones, mensajes, mapa y cámara.                                     |
-| 2 — relay y Foxglove           | **Completada**                | Simulador y telemetría real del POCO publicados en los cinco tópicos.                              |
-| 3 — cliente AR y pose cruda    | **Completada en POCO X7 Pro** | Ejes dirigidos, tracking 100 %, buffer 0, 0 inválidos y deriva estacionaria de 1,7 mm.             |
-| 4 — cámara e intrínsecos       | **Completada en POCO X7 Pro** | `camera-access`, textura real, gris a 10,2 Hz, intrínsecos estables y `hello` verificados.         |
-| 5 — detección de marcadores    | **Validación móvil parcial**  | 882 observaciones del ID 0 en pantalla; error medio 0,33 px y máximo 2,09 px.                      |
-| 6 — corrección de localización | **Completada**                | Tres modos y pose absoluta pasaron con un marcador de mapa controlado.                             |
-| 7 — visualización Foxglove     | **Completada**                | Layout de tres paneles validado en Foxglove Studio 3.6.0 y telemetría móvil recibida.              |
-| 8 — registro y evaluación      | **Parcial avanzada**          | Grabador y analizador implementados; falta analizar una corrida real y usar sus CSV en el informe. |
-| 9 — experimentos físicos       | **Preparada; pendiente**      | Guía creada; faltan mapa medido y al menos tres repeticiones por condición.                        |
-| 10 — documentación y entrega   | **En curso**                  | README, guías y evidencias actualizados; faltan resultados físicos, informe y video/demo.          |
+| Fase                           | Estado                        | Observación                                                                                      |
+| ------------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------ |
+| 0 — entorno y HTTPS            | **Completada**                | CA instalada en POCO X7 Pro; HTTPS LAN, `immersive-ar`, `local-floor` y sesión real verificados. |
+| 1 — matemática y convenciones  | **Completada**                | 44 tests de matemática, convenciones, mensajes, mapa y cámara.                                   |
+| 2 — relay y Foxglove           | **Completada**                | Simulador y telemetría real del POCO publicados en los cinco tópicos.                            |
+| 3 — cliente AR y pose cruda    | **Completada en POCO X7 Pro** | Ejes dirigidos, tracking 100 %, buffer 0, 0 inválidos y deriva estacionaria de 1,7 mm.           |
+| 4 — cámara e intrínsecos       | **Completada en POCO X7 Pro** | `camera-access`, textura real, gris a 10,2 Hz, intrínsecos estables y `hello` verificados.       |
+| 5 — detección de marcadores    | **Completada**                | PnP físico a 60 cm, error −6,23 %, ejes coherentes y reproyección estable.                       |
+| 6 — corrección de localización | **Completada**                | Tres modos y pose absoluta pasaron con un marcador de mapa controlado.                           |
+| 7 — visualización Foxglove     | **Completada**                | Layout de tres paneles validado en Foxglove Studio 3.6.0 y telemetría móvil recibida.            |
+| 8 — registro y evaluación      | **Completada**                | Corrida móvil cerrada grabada y analizada cuantitativamente.                                     |
+| 9 — experimentos físicos       | **Preparada; pendiente**      | Guía creada; faltan mapa medido y al menos tres repeticiones por condición.                      |
+| 10 — documentación y entrega   | **En curso**                  | README, guías y evidencias actualizados; faltan resultados físicos, informe y video/demo.        |
 
 La Fase 0 se cerró el **2026-11-22** con un POCO X7 Pro. La CA de `mkcert` se
 instaló como CA de usuario, Chrome abrió `https://192.168.0.179:5173/` sin
@@ -481,6 +481,26 @@ estimación de tiempo con marcadores visibles y errores en puntos de control.
 La ventana de visibilidad predeterminada es 250 ms y puede cambiarse con
 `--visibility-ms`.
 
+El **2026-11-23** se grabó y analizó una corrida móvil cerrada real en modo
+`off`, alejándose aproximadamente 1 m y regresando al punto inicial:
+
+| Métrica                       | Resultado |
+| ----------------------------- | --------- |
+| Duración                      | 27,21 s   |
+| Poses                         | 724       |
+| Frecuencia                    | 26,57 Hz  |
+| Tracking                      | 100 %     |
+| Visibilidad del marcador      | 86,19 %   |
+| Error de cierre crudo         | 26,96 cm  |
+| Retorno físico según AprilTag | ≈1,4 cm   |
+
+La referencia independiente del AprilTag confirma que el celular volvió casi
+al mismo punto; por eso el error de cierre representa principalmente deriva de
+la odometría cruda y no una diferencia de colocación. El analizador generó
+localmente `metrics.json`, `trajectory.csv` y `checkpoints.csv`. La latencia de
+aproximadamente 1,03 s contiene un offset casi constante entre los relojes del
+cliente y el servidor y no debe interpretarse como latencia de red aislada.
+
 El 2026-11-22 se ejecutaron nuevamente las verificaciones automatizadas:
 
 | Comando             | Resultado                     |
@@ -554,7 +574,7 @@ Esta prueba valida el circuito de grabación con datos sintéticos, pero no demu
 - [x] Detectar un AprilTag ID 0 y medir error de reproyección y distancia estimada.
 - [x] Validar PnP con un tamaño físico conocido (16 cm a 60 cm; error −6,23 %).
 - [ ] Comparar los modos `off`, `direct` y `smooth` con recorridos repetibles.
-- [ ] Grabar y analizar una corrida móvil real.
+- [x] Grabar y analizar una corrida móvil real.
 - [ ] Medir la sala y completar las repeticiones de la Fase 9.
 
 ### Cómo registrar el resultado
@@ -603,18 +623,15 @@ No modificar los resultados automáticos sin volver a ejecutar los comandos.
    −6,23 %; no se realizó calibración propia porque quedó dentro de ±10 %.
 6. La corrección se validó con un marcador de mapa controlado; todavía falta un
    mapa completo de sala para los experimentos de la Fase 9.
-7. Falta una corrida móvil repetible para el informe de la Fase 8.
-8. `@foxglove/ws-protocol` 0.8.0 está deprecado, pero se mantiene por decisión
+7. `@foxglove/ws-protocol` 0.8.0 está deprecado, pero se mantiene por decisión
    del proyecto.
 
 ## 12. Próximo paso
 
-1. Grabar recorridos repetibles y ejecutar `pnpm analyze` sobre cada JSONL.
-2. Medir la sala y reemplazar el mapa demo sintético para la Fase 9.
-3. Seguir `docs/phase-9-physical-tests.md`, con al menos tres
+1. Medir la sala y reemplazar el mapa demo sintético para la Fase 9.
+2. Seguir `docs/phase-9-physical-tests.md`, con al menos tres
    repeticiones por condición.
-4. Incorporar las tablas y gráficos al informe final y preparar el video/demo.
+3. Incorporar las tablas y gráficos al informe final y preparar el video/demo.
 
-Las fases 0 a 7 están cerradas para el entorno probado. Las fases 8 a 10
-requieren corridas repetibles, el mapa medido y la entrega final.
-la evaluación repetible y la entrega final.
+Las fases 0 a 8 están cerradas para el entorno probado. Las fases 9 y 10
+requieren el mapa medido, las repeticiones físicas y la entrega final.

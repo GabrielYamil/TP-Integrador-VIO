@@ -124,5 +124,27 @@
       "result": "Absolute corrected pose passed in the controlled physical map with 5.8 cm 3D error."
     },
     "limitation": "A complete measured-room map and multi-condition repetitions belong to Phase 9."
+  },
+  "phase8_closed_loop": {
+    "status": "passed and analyzed",
+    "run": "20261124T000057644Z-064043ee.jsonl",
+    "protocol": "mode off; approximately 1 m backward and return to the marked start pose",
+    "duration_s": 27.2146,
+    "messages": { "total": 919, "pose": 724, "marker": 194, "hello": 1 },
+    "update_rate_hz": 26.5666,
+    "tracking_percent": 100.0,
+    "marker_visibility_percent": 86.1878,
+    "closure_error_m": { "raw": 0.2696, "corrected": 0.2696 },
+    "physical_return_check": {
+      "marker_distance_start_m": 0.4932,
+      "marker_distance_end_m": 0.4802,
+      "relative_position_change_approx_m": 0.014,
+      "result": "The phone returned within approximately 1.4 cm relative to the marker, so the 27 cm raw closure error primarily represents odometry drift."
+    },
+    "latency_ms": {
+      "mean": 1025.75,
+      "p95": 1035.4,
+      "note": "Includes a roughly constant client/server timestamp offset and must not be interpreted as network latency alone."
+    }
   }
 }

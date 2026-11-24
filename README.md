@@ -10,19 +10,19 @@ documentación y la interfaz están en español; el código y los tests en ingl�
 
 ## Estado actual
 
-| Fase                                | Estado                                                                  |
-| ----------------------------------- | ----------------------------------------------------------------------- |
-| 0 — entorno, HTTPS y prueba AR      | **Completada** en POCO X7 Pro el 2026-11-22.                            |
-| 1 — matemática SE(3) y convenciones | **Completada.**                                                         |
-| 2 — relay y servidor Foxglove       | **Completada**, con simulador y telemetría móvil real.                  |
-| 3 — cliente WebXR y pose cruda      | **Completada en POCO X7 Pro.**                                          |
-| 4 — cámara e intrínsecos            | **Completada para el POCO X7 Pro.**                                     |
-| 5 — detección de marcadores y PnP   | **Completada en POCO X7 Pro**; error métrico de −6,23 % a 60 cm.        |
-| 6 — corrección de localización      | **Completada** con mapa controlado y los tres modos.                    |
-| 7 — visualización en Foxglove       | **Completada**, validada en Foxglove Studio 3.6.0.                      |
-| 8 — registro y evaluación           | Grabador y analizador implementados; falta una corrida real y gráficos. |
-| 9 — experimentos físicos            | Guía preparada; ejecución pendiente.                                    |
-| 10 — documentación y entrega        | En curso; faltan resultados físicos, informe y video/demo.              |
+| Fase                                | Estado                                                                |
+| ----------------------------------- | --------------------------------------------------------------------- |
+| 0 — entorno, HTTPS y prueba AR      | **Completada** en POCO X7 Pro el 2026-11-22.                          |
+| 1 — matemática SE(3) y convenciones | **Completada.**                                                       |
+| 2 — relay y servidor Foxglove       | **Completada**, con simulador y telemetría móvil real.                |
+| 3 — cliente WebXR y pose cruda      | **Completada en POCO X7 Pro.**                                        |
+| 4 — cámara e intrínsecos            | **Completada para el POCO X7 Pro.**                                   |
+| 5 — detección de marcadores y PnP   | **Completada en POCO X7 Pro**; error métrico de −6,23 % a 60 cm.      |
+| 6 — corrección de localización      | **Completada** con mapa controlado y los tres modos.                  |
+| 7 — visualización en Foxglove       | **Completada**, validada en Foxglove Studio 3.6.0.                    |
+| 8 — registro y evaluación           | **Completada** con una corrida móvil cerrada y análisis cuantitativo. |
+| 9 — experimentos físicos            | Guía preparada; ejecución pendiente.                                  |
+| 10 — documentación y entrega        | En curso; faltan resultados físicos, informe y video/demo.            |
 
 La Fase 0 incluye el servidor HTTPS, el script de certificados, las páginas de
 diagnóstico WebXR y el modo mock de escritorio. El 2026-11-22 se instaló la CA
@@ -344,7 +344,8 @@ emulador no las reemplaza. El plan restante está resumido en
    perder detecciones. La pose absoluta controlada fue `[0,023, 0,627, 1,154] m`
    frente a `[0,000, 0,600, 1,200] m` (error 3D de 5,8 cm). El mapa completo de
    sala corresponde a la Fase 9.
-4. **Fase 8:** grabar y analizar una corrida real con `pnpm analyze`.
+4. **Fase 8:** completada con una corrida cerrada real de 27,21 s, 724 poses,
+   tracking 100 %, 26,57 Hz y error de cierre crudo de 26,96 cm.
 5. **Fase 9:** ejecutar la guía de experimentos físicos con al menos tres
    repeticiones por condición.
 6. **Fase 10:** incorporar tablas/gráficos y preparar el informe y video final.
