@@ -3,8 +3,8 @@
 Última actualización: **2026-11-23**.
 
 Este informe reúne el estado de las fases 0 a 10. La Fase 7 fue validada en
-escritorio con Foxglove Studio 3.6.0. La Fase 9 cuenta con una guía de pruebas
-físicas, cuya ejecución está pendiente.
+escritorio con Foxglove Studio 3.6.0. La Fase 9 se validó en un montaje
+controlado; queda pendiente generalizar a una sala con varios marcadores.
 
 ## Resumen
 
@@ -44,28 +44,28 @@ En la Fase 4, el POCO entregó una textura de 864×1920 y una imagen procesada d
 
 ## 2. Verificaciones automáticas
 
-Última corrida documentada (2026-11-22, desde la raíz del repo):
+Última corrida documentada (2026-11-23, desde la raíz del repo):
 
 | Comando             | Resultado                                         |
 | :------------------ | :------------------------------------------------ |
 | `pnpm typecheck`    | OK (`shared`, `client`, `server`).                |
-| `pnpm test`         | 122 tests aprobados.                              |
+| `pnpm test`         | 126 tests aprobados.                              |
 | `pnpm lint`         | OK, sin errores.                                  |
 | `pnpm build`        | OK (build multipágina en `packages/client/dist`). |
 | `pnpm format:check` | OK (tras Prettier).                               |
 | `git diff --check`  | OK.                                               |
 
-### Detalle de los tests (122 total al 2026-11-23)
+### Detalle de los tests (126 total al 2026-11-23)
 
 Desglose por paquete en la última ejecución:
 
 packages/shared: 6 archivos, 44 tests.
 
-packages/client: 9 archivos, 43 tests.
+packages/client: 9 archivos, 47 tests.
 
 packages/server: 6 archivos, 35 tests.
 
-Total: 21 archivos y 122 tests aprobados.
+Total: 21 archivos y 126 tests aprobados.
 
 | Archivo                                                 | Tests | Cobertura principal                                                                       |
 | :------------------------------------------------------ | :---: | :---------------------------------------------------------------------------------------- |
@@ -76,12 +76,12 @@ Total: 21 archivos y 122 tests aprobados.
 | `packages/shared/src/camera/intrinsics.test.ts`         |   8   | Intrínsecos, frustum asimétrico, origen top-left, escalado y errores.                     |
 | `packages/shared/src/camera/calibration.test.ts`        |   3   | Esquema de calibración y escalado a imagen procesada.                                     |
 | `packages/client/src/ws-client.test.ts`                 |   7   | Envío, buffer, descarte por límite/edad, backoff y cierre WS.                             |
-| `packages/client/src/client-config.test.ts`             |   5   | Defaults, overrides (`hz`/`camhz`/`camw`/`preview`) y URL del relay.                      |
-| `packages/client/src/camera-capture.test.ts`            |   5   | Tamaño de captura, aspect ratio y ausencia de `XRWebGLBinding`.                           |
+| `packages/client/src/client-config.test.ts`             |   5   | Defaults, overrides (`hz`/`camhz`/`camw`) y URL del relay.                                |
+| `packages/client/src/camera-capture.test.ts`            |   7   | Tamaño de captura, aspect ratio y ausencia de `XRWebGLBinding`.                           |
 | `packages/client/src/camera-calibration.test.ts`        |   4   | Carga, 404, error HTTP/red y validación de esquema.                                       |
 | `packages/client/src/device-label.test.ts`              |   4   | Modelo Android y truncado a 256 chars.                                                    |
-| `packages/client/src/marker-detector.test.ts`           |   3   | API real de OpenCV.js 5, AprilTag, `ArucoDetector`, `solvePnP` y reproyección.            |
-| `packages/client/src/debug-overlay.test.ts`             |   2   | Proyección 3D→2D, contornos y ejes 3D en canvas.                                          |
+| `packages/client/src/marker-detector.test.ts`           |   5   | API real de OpenCV.js 5, AprilTag, `ArucoDetector`, `solvePnP` y reproyección.            |
+| `packages/client/src/debug-overlay.test.ts`             |   2   | Proyección de ejes `world` usando la pose detectada y la orientación del mapa.            |
 | `packages/client/src/rate-limit-clock.test.ts`          |   6   | Reloj de envío estable ante jitter y saltos de frames.                                    |
 | `packages/server/src/foxglove.test.ts`                  |   4   | ms→ns, JSON Schemas, TF, escena, métricas y snapshot inicial.                             |
 | `packages/server/src/ingest.test.ts`                    |   2   | Mensajes válidos, inválidos y binarios; rechazo de otras rutas WS.                        |
@@ -273,9 +273,9 @@ packages/client/src/camera-calibration.ts: descarga y validación de la calibrac
 
 packages/client/src/device-label.ts: extracción del modelo de Android para hello, con recorte a 256 caracteres.
 
-packages/client/src/ar.ts: integración de la captura a cameraHz, vista previa, overlay de cámara/intrínsecos/hello, degradación a solo VIO cuando camera-access o XRWebGLBinding no están disponibles, y limpieza de la sesión.
+packages/client/src/ar.ts: integración de la captura a cameraHz, cámara AR a pantalla completa, overlay de estado/intrínsecos/hello y degradación a solo VIO cuando camera-access o XRWebGLBinding no están disponibles.
 
-packages/client/src/client-config.ts: maxDimension (640 px), captureHz (10 Hz), preview y calibrationUrl, con overrides ?camhz=, ?camw= y ?preview=.
+packages/client/src/client-config.ts: maxDimension (640 px), captureHz (10 Hz) y calibrationUrl, con overrides ?camhz= y ?camw=.
 
 packages/server/src/camera-calibration-loader.ts y index.ts: carga opcional al arrancar, validación zod, endpoint GET /config/camera_intrinsics.json y campos en /health.
 
@@ -506,7 +506,7 @@ El 2026-11-22 se ejecutaron nuevamente las verificaciones automatizadas:
 | Comando             | Resultado                     |
 | :------------------ | :---------------------------- |
 | `pnpm typecheck`    | OK.                           |
-| `pnpm test`         | 122 tests aprobados en total. |
+| `pnpm test`         | 126 tests aprobados en total. |
 | `pnpm lint`         | OK.                           |
 | `pnpm build`        | OK.                           |
 | `pnpm format:check` | OK.                           |

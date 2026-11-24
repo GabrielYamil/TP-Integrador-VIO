@@ -50,11 +50,13 @@ sobre `-world.z`, con tracking 100 % y 0 mensajes inválidos.
 
 La Fase 4 agrega la captura de cámara cuando `camera-access` está disponible:
 `XRWebGLBinding.getCameraImage` se reduce en GPU a un framebuffer de 640 px de
-lado máximo, se convierte a gris con origen arriba a la izquierda y se muestra
-en el overlay. Los intrínsecos se derivan de `XRView.projectionMatrix` o se
-cargan de la calibración opcional `config/camera_intrinsics.json`; se envían en
-un mensaje `hello` al abrir la conexión y después de cada reconexión. El
-servidor expone `GET /config/camera_intrinsics.json` (404 si no hay archivo).
+lado máximo y se convierte a gris para OpenCV; el procesamiento abarca todo el
+encuadre, sin recortarlo a una ventana de vista previa. La cámara de
+`immersive-ar` se muestra a pantalla completa en el dispositivo. Los intrínsecos
+se derivan de `XRView.projectionMatrix` o se cargan de la calibración opcional
+`config/camera_intrinsics.json`; se envían en un mensaje `hello` al abrir la
+conexión y después de cada reconexión. El servidor expone
+`GET /config/camera_intrinsics.json` (404 si no hay archivo).
 En el POCO se validaron una textura de 864×1920, gris procesado de 288×640 a
 10,2 Hz, orientación correcta, intrínsecos estables derivados de `XRView` y el
 envío de `hello`.
@@ -66,9 +68,10 @@ en escala de grises se transfiere al worker mediante `Transferable` (Zero-Copy)
 usando un pool de buffers. La detección ejecuta `solvePnP` (con `SOLVEPNP_IPPE_SQUARE`),
 calcula el error de reproyección (`≤ 5.0 px`) y transmite los mensajes `marker` por
 WebSocket al relay. Incluye overlay de depuración 2D/3D (`debug-overlay.ts`) que
-dibuja el contorno del marcador, su ID, error y los ejes 3D proyectados (X=rojo,
-Y=verde, Z=azul). En el POCO se registraron 882 observaciones del ID 0 mostrado
-en una pantalla, con error de reproyección medio de 0,33 px y máximo de 2,09 px.
+dibuja el contorno del marcador, su ID, error y los ejes globales `world`
+proyectados sobre cada detección (X=rojo, Y=verde, Z=azul), según el mapa. En
+el POCO se registraron 882 observaciones del ID 0 mostrado en una pantalla, con
+error de reproyección medio de 0,33 px y máximo de 2,09 px.
 
 La Fase 6 agrega la corrección de localización con mapa conocido de marcadores
 (`LocalizationCorrector`). Descarga `config/marker_map.json` expuesto por el
@@ -229,13 +232,13 @@ simulada en la convención de WebXR. No valida ARCore ni `camera-access`.
 
 ## Páginas
 
-| Ruta            | Descripción                                                                                                                                             |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`             | Estado del entorno, enlaces y verificación del servidor.                                                                                                |
-| `/ar.html`      | Cliente de las fases 3, 4, 5 y 6: pose cruda, pose corregida, cámara en gris, intrínsecos, detección AprilTag, corrección de localización y overlay 3D. |
-| `/ar-test.html` | Prueba de `immersive-ar`, reference spaces y `camera-access`.                                                                                           |
-| `/mock.html`    | Webcam y simulación de pose para escritorio.                                                                                                            |
-| `/health`       | Estado del servidor, la ingesta, la calibración y Foxglove en JSON.                                                                                     |
+| Ruta            | Descripción                                                                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`             | Estado del entorno, enlaces y verificación del servidor.                                                                                          |
+| `/ar.html`      | Cliente de las fases 3, 4, 5 y 6: cámara AR a pantalla completa, pose cruda y corregida, intrínsecos, detección AprilTag y overlay de marcadores. |
+| `/ar-test.html` | Prueba de `immersive-ar`, reference spaces y `camera-access`.                                                                                     |
+| `/mock.html`    | Webcam y simulación de pose para escritorio.                                                                                                      |
+| `/health`       | Estado del servidor, la ingesta, la calibración y Foxglove en JSON.                                                                               |
 
 ## Comandos
 
@@ -250,7 +253,7 @@ simulada en la convención de WebXR. No valida ARCore ni `camera-access`.
 | `pnpm analyze -- <corrida.jsonl>`   | Calcula métricas y exporta JSON/CSV para el informe.          |
 | `pnpm preview`                      | `pnpm build` seguido de `pnpm start`.                         |
 | `pnpm typecheck`                    | TypeScript estricto en todos los paquetes.                    |
-| `pnpm test`                         | Vitest. Estado actual: 21 archivos, 122 tests.                |
+| `pnpm test`                         | Vitest. Estado actual: 21 archivos, 126 tests.                |
 | `pnpm lint`                         | ESLint.                                                       |
 | `pnpm format` / `pnpm format:check` | Prettier sobre el repo.                                       |
 | `pnpm cert:setup`                   | Genera certificados mkcert, exporta la CA y abre el firewall. |
@@ -328,7 +331,7 @@ pnpm format:check
 
 El estado de los tests automáticos y las verificaciones manuales se documenta
 en [`docs/results.md`](docs/results.md). En el estado actual hay 21 archivos y
-122 tests: 44 de `packages/shared`, 43 de `packages/client` y 35 de
+126 tests: 44 de `packages/shared`, 47 de `packages/client` y 35 de
 `packages/server`. Las pruebas WebXR siguen requiriendo un celular real; el
 emulador no las reemplaza. El plan restante está resumido en
 [`docs/validation-plan.md`](docs/validation-plan.md).
@@ -364,8 +367,8 @@ Informe consolidado: [`docs/final-report.md`](docs/final-report.md).
   sigue funcionando solo con VIO y las Fases 4 y 5 quedan bloqueadas.
 - Foxglove Studio y el layout se validaron en escritorio; además recibió
   telemetría real del celular. Conviene guardar una captura final para el informe.
-- La evaluación física usó un mapa medido de un marcador en un montaje
-  controlado; no se evaluó una sala completa con múltiples marcadores rígidos.
+- El mapa versionado sigue siendo sintético; la evaluación física usó un
+  marcador medido en un montaje controlado, no una sala completa multimarcador.
 - `@foxglove/ws-protocol` está deprecado, aunque se mantiene la versión elegida
   por el plan.
 - El servidor Foxglove usa `ws://` en la red local; el relay del celular sí usa

@@ -1,22 +1,9 @@
 /**
- * Renderizado de superposición de depuración (contornos 2D, IDs y ejes 3D proyectados).
+ * Dibuja contornos e IDs y proyecta los ejes `world` usando el mapa y la pose detectada.
  */
-import type { CameraIntrinsics, Quat, Vec3 } from '@vio/shared';
-import { quatToMat3 } from '@vio/shared';
+import type { CameraIntrinsics, MarkerMap, Vec3 } from '@vio/shared';
+import { apply, compose, findMarker, inverse, markerPose } from '@vio/shared';
 import type { MarkerDetectionResult } from './worker-protocol';
-
-/**
- * Transforma un punto 3D desde el marco del marcador al marco de la cámara OpenCV usando T_cam_marker = (p, q).
- */
-function transformMarkerToCam(pointMarker: Vec3, p: Vec3, q: Quat): Vec3 {
-  const R = quatToMat3(q); // Column-major Mat3
-  // p_cam = R * pointMarker + p
-  const [x, y, z] = pointMarker;
-  const cx = R[0] * x + R[3] * y + R[6] * z + p[0];
-  const cy = R[1] * x + R[4] * y + R[7] * z + p[1];
-  const cz = R[2] * x + R[5] * y + R[8] * z + p[2];
-  return [cx, cy, cz];
-}
 
 /**
  * Proyecta un punto 3D en el marco OpenCV (x derecha, y abajo, z adelante) a coordenadas 2D de píxel.
@@ -35,6 +22,7 @@ export function drawDebugOverlay(
   ctx: CanvasRenderingContext2D,
   detections: MarkerDetectionResult[],
   intrinsics: CameraIntrinsics | null,
+  markerMap: MarkerMap | null = null,
   axisLengthM = 0.08,
 ): void {
   const width = ctx.canvas.width;
@@ -67,51 +55,48 @@ export function drawDebugOverlay(
     ctx.fillStyle = '#ffff00';
     ctx.fillText(`ID:${id} (${reproj_err_px.toFixed(1)}px)`, corners[0][0] + 6, corners[0][1] - 6);
 
-    // 2. Dibujar ejes 3D (X=rojo, Y=verde, Z=azul)
-    if (intrinsics) {
-      const p = T_cam_marker.p;
-      const q = T_cam_marker.q;
+    const marker = markerMap ? findMarker(markerMap, id) : undefined;
+    if (!intrinsics || !marker) continue;
 
-      const originCam = transformMarkerToCam([0, 0, 0], p, q);
-      const xAxisCam = transformMarkerToCam([axisLengthM, 0, 0], p, q);
-      const yAxisCam = transformMarkerToCam([0, axisLengthM, 0], p, q);
-      const zAxisCam = transformMarkerToCam([0, 0, axisLengthM], p, q);
+    // Convertir los ejes globales del mapa a la cámara usando la pose observada del tag.
+    const T_cv_world = compose(T_cam_marker, inverse(markerPose(marker)));
+    const [worldX, worldY, worldZ] = marker.position;
+    const originCv = apply(T_cv_world, marker.position);
+    const xAxisCv = apply(T_cv_world, [worldX + axisLengthM, worldY, worldZ]);
+    const yAxisCv = apply(T_cv_world, [worldX, worldY + axisLengthM, worldZ]);
+    const zAxisCv = apply(T_cv_world, [worldX, worldY, worldZ + axisLengthM]);
 
-      const p0 = projectPoint(originCam, intrinsics);
-      const px = projectPoint(xAxisCam, intrinsics);
-      const py = projectPoint(yAxisCam, intrinsics);
-      const pz = projectPoint(zAxisCam, intrinsics);
+    const p0 = projectPoint(originCv, intrinsics);
+    const px = projectPoint(xAxisCv, intrinsics);
+    const py = projectPoint(yAxisCv, intrinsics);
+    const pz = projectPoint(zAxisCv, intrinsics);
 
-      if (p0) {
-        ctx.lineWidth = 3;
+    if (!p0) continue;
+    ctx.lineWidth = 3;
 
-        // Eje X (+x derecha en el marcador) - Rojo
-        if (px) {
-          ctx.strokeStyle = '#ff3333';
-          ctx.beginPath();
-          ctx.moveTo(p0[0], p0[1]);
-          ctx.lineTo(px[0], px[1]);
-          ctx.stroke();
-        }
+    // Ejes +X, +Y y +Z de `world`: rojo, verde y azul.
+    if (px) {
+      ctx.strokeStyle = '#ff3333';
+      ctx.beginPath();
+      ctx.moveTo(p0[0], p0[1]);
+      ctx.lineTo(px[0], px[1]);
+      ctx.stroke();
+    }
 
-        // Eje Y (+y arriba en el marcador) - Verde
-        if (py) {
-          ctx.strokeStyle = '#33ff33';
-          ctx.beginPath();
-          ctx.moveTo(p0[0], p0[1]);
-          ctx.lineTo(py[0], py[1]);
-          ctx.stroke();
-        }
+    if (py) {
+      ctx.strokeStyle = '#33ff33';
+      ctx.beginPath();
+      ctx.moveTo(p0[0], p0[1]);
+      ctx.lineTo(py[0], py[1]);
+      ctx.stroke();
+    }
 
-        // Eje Z (+z saliendo de la cara del marcador) - Azul
-        if (pz) {
-          ctx.strokeStyle = '#3388ff';
-          ctx.beginPath();
-          ctx.moveTo(p0[0], p0[1]);
-          ctx.lineTo(pz[0], pz[1]);
-          ctx.stroke();
-        }
-      }
+    if (pz) {
+      ctx.strokeStyle = '#3388ff';
+      ctx.beginPath();
+      ctx.moveTo(p0[0], p0[1]);
+      ctx.lineTo(pz[0], pz[1]);
+      ctx.stroke();
     }
   }
 }

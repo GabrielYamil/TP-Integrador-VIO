@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeCaptureSize, createCameraBinding } from './camera-capture';
+import { computeCaptureSize, createCameraBinding, rgbaToGray } from './camera-capture';
 
 describe('computeCaptureSize', () => {
   it('keeps the source size when it is below the maximum', () => {
@@ -29,5 +29,18 @@ describe('computeCaptureSize', () => {
 describe('createCameraBinding', () => {
   it('returns null when XRWebGLBinding is not exposed', () => {
     expect(createCameraBinding({} as XRSession, {} as WebGL2RenderingContext)).toBeNull();
+  });
+});
+
+describe('rgbaToGray', () => {
+  it('converts colored pixels to grayscale while ignoring alpha', () => {
+    const gray = new Uint8Array(3);
+    rgbaToGray(new Uint8Array([255, 0, 0, 0, 0, 255, 0, 128, 0, 0, 255, 7]), gray);
+
+    expect(Array.from(gray)).toEqual([76, 150, 29]);
+  });
+
+  it('rejects buffers with mismatched pixel counts', () => {
+    expect(() => rgbaToGray(new Uint8Array(3), new Uint8Array(1))).toThrow(/cuatro canales/);
   });
 });

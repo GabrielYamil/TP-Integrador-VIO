@@ -15,24 +15,22 @@ describe('readRuntimeConfig', () => {
 
   it('reads pose, ingest, camera and mode overrides', () => {
     const config = readRuntimeConfig(
-      '?hz=15&ingest=wss%3A%2F%2F192.168.1.18%3A8443%2Fingest&camhz=5&camw=480&preview=0&mode=direct',
+      '?hz=15&ingest=wss%3A%2F%2F192.168.1.18%3A8443%2Fingest&camhz=5&camw=480&mode=direct',
       TEST_LOCATION,
     );
     expect(config.poseHz).toBe(15);
     expect(config.camera.captureHz).toBe(5);
     expect(config.camera.maxDimension).toBe(480);
-    expect(config.camera.preview).toBe(false);
     expect(config.correctionMode).toBe('direct');
     expect(config.ingestUrl).toBe('wss://192.168.1.18:8443/ingest');
     expect(config.warnings).toEqual([]);
   });
 
-  it('accepts preview=true and rejects out-of-range values with warnings', () => {
-    const config = readRuntimeConfig('?camhz=0&camw=9999&preview=quizas', TEST_LOCATION);
+  it('rejects out-of-range camera values with warnings', () => {
+    const config = readRuntimeConfig('?camhz=0&camw=9999', TEST_LOCATION);
     expect(config.camera.captureHz).toBe(CLIENT_CONFIG.camera.captureHz);
     expect(config.camera.maxDimension).toBe(CLIENT_CONFIG.camera.maxDimension);
-    expect(config.camera.preview).toBe(CLIENT_CONFIG.camera.preview);
-    expect(config.warnings).toHaveLength(3);
+    expect(config.warnings).toHaveLength(2);
   });
 
   it('falls back when the ingest URL is not ws or wss', () => {

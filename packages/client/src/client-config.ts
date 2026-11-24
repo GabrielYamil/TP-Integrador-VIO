@@ -6,7 +6,7 @@
  * string para las pruebas:
  *
  *   /ar.html?hz=15&ingest=wss://192.168.1.18:8443/ingest
- *   /ar.html?camhz=5&camw=480&preview=0
+ *   /ar.html?camhz=5&camw=480
  *
  * Los límites del buffer y de reconexión viven en `ws-client.ts` porque son
  * parte del transporte, no de la sesión WebXR.
@@ -18,8 +18,6 @@ export interface CameraConfig {
   maxDimension: number;
   /** Frecuencia máxima de captura y conversión a gris. */
   captureHz: number;
-  /** Muestra la imagen en gris en el overlay. */
-  preview: boolean;
   /** Ruta servida por Express o por el proxy de Vite. */
   calibrationUrl: string;
 }
@@ -52,7 +50,6 @@ export const CLIENT_CONFIG: ClientConfig = {
   camera: {
     maxDimension: 640,
     captureHz: 10,
-    preview: true,
     calibrationUrl: '/config/camera_intrinsics.json',
   },
   correctionMode: 'smooth',
@@ -136,19 +133,6 @@ export function readRuntimeConfig(
     } else {
       warnings.push(
         `El parámetro camw="${rawCameraWidth}" no es válido; se usa ${camera.maxDimension} px.`,
-      );
-    }
-  }
-
-  const rawPreview = params.get('preview');
-  if (rawPreview !== null) {
-    if (rawPreview === '1' || rawPreview === 'true') {
-      camera.preview = true;
-    } else if (rawPreview === '0' || rawPreview === 'false') {
-      camera.preview = false;
-    } else {
-      warnings.push(
-        `El parámetro preview="${rawPreview}" no es válido; se usa ${camera.preview ? '1' : '0'}.`,
       );
     }
   }

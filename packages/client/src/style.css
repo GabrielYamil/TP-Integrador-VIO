@@ -465,6 +465,7 @@ body.ar-body.session-active {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  align-items: flex-start;
   padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
   pointer-events: none;
   font-family: var(--sans);
@@ -475,6 +476,8 @@ body.ar-body.session-active {
 }
 
 .overlay-panel {
+  position: relative;
+  z-index: 1;
   width: fit-content;
   max-width: min(26rem, 92vw);
   padding: 0.75rem 0.9rem;
@@ -489,6 +492,16 @@ body.ar-body.session-active {
 
 .overlay-panel strong {
   color: #7ce8ff;
+}
+
+.marker-overlay {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
 .overlay .button {
@@ -524,19 +537,15 @@ body.ar-body.session-active {
   color: #fecdd3;
 }
 
-.camera-preview {
-  display: block;
-  width: min(52vw, 220px);
-  height: auto;
-  margin-top: 0.55rem;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  border-radius: 8px;
-  background: #000;
-  image-rendering: pixelated;
+.overlay .row.mode-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.4rem;
 }
 
-.camera-preview[hidden] {
-  display: none;
+.mode-buttons .button {
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .reticle {
@@ -678,5 +687,50 @@ body.ar-body.session-active {
 
   .card {
     padding: 1.05rem;
+  }
+
+  .overlay {
+    gap: 0.5rem;
+    padding: max(0.5rem, env(safe-area-inset-top)) 0.5rem max(0.5rem, env(safe-area-inset-bottom));
+  }
+
+  .overlay-panel {
+    width: 100%;
+    max-width: none;
+    padding: 0.55rem 0.65rem;
+    font-size: 0.72rem;
+    line-height: 1.35;
+  }
+
+  .overlay-panel:first-of-type {
+    max-height: 34dvh;
+    overflow-y: auto;
+  }
+
+  .overlay-panel:last-of-type {
+    margin-top: auto;
+  }
+
+  .overlay h2 {
+    font-size: 0.85rem;
+  }
+
+  .overlay .row {
+    gap: 0.25rem 0.55rem;
+  }
+
+  .overlay .value,
+  .overlay-panel strong {
+    font-size: 0.68rem;
+  }
+
+  .overlay .row.mode-buttons {
+    gap: 0.3rem;
+  }
+
+  .mode-buttons .button {
+    min-height: 2.5rem;
+    padding: 0.3rem 0.15rem;
+    font-size: clamp(0.65rem, 2.4vw, 0.78rem);
   }
 }

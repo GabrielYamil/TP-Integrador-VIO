@@ -1,5 +1,5 @@
 /**
- * Captura de la textura de cámara WebXR y conversión a gris (Fase 4).
+ * Captura de la textura de cámara WebXR en color y conversión a gris para OpenCV.
  *
  * `XRWebGLBinding.getCameraImage(view.camera)` devuelve una textura opaca con
  * origen abajo a la izquierda. Para no leer la resolución completa de la cámara
@@ -8,8 +8,8 @@
  *
  * El shader muestrea la textura con `v = 1 - v`. Así la primera fila que
  * devuelve `readPixels` (el borde inferior del framebuffer) corresponde al borde
- * superior de la imagen. El buffer en gris queda en orden row-major con origen
- * arriba a la izquierda, listo para OpenCV y para el futuro Web Worker.
+ * superior de la imagen. El buffer RGBA se convierte a gris row-major con
+ * origen arriba a la izquierda para OpenCV.
  *
  * Referencias:
  * - https://immersive-web.github.io/raw-camera-access/
@@ -53,8 +53,6 @@ export interface CameraFrame {
   sourceHeight: number;
   /** Gris row-major, origen arriba a la izquierda, válido hasta la próxima captura. */
   gray: Uint8Array;
-  /** RGBA con R=G=B=gris, útil para la vista previa. Misma vigencia que `gray`. */
-  rgba: Uint8Array;
   /** Intrínsecos para `width × height`, ya con origen arriba a la izquierda. */
   intrinsics: CameraIntrinsics;
   /** Sesgo en píxeles de la proyección; normalmente 0. */
@@ -64,6 +62,18 @@ export interface CameraFrame {
 export interface CameraFrameGrabberOptions {
   maxDimension: number;
   calibration?: CameraCalibration | null;
+}
+
+export function rgbaToGray(rgba: Uint8Array, gray: Uint8Array): void {
+  if (rgba.length !== gray.length * 4) {
+    throw new Error('El buffer RGBA debe tener cuatro canales por píxel');
+  }
+
+  for (let source = 0, target = 0; target < gray.length; source += 4, target += 1) {
+    gray[target] = Math.round(
+      rgba[source] * 0.299 + rgba[source + 1] * 0.587 + rgba[source + 2] * 0.114,
+    );
+  }
 }
 
 /**
@@ -126,8 +136,7 @@ void main() {
   // La textura WebXR tiene origen abajo; el framebuffer y readPixels, también.
   // Al invertir v, la primera fila leída queda como borde superior.
   vec3 rgb = texture(u_camera, vec2(v_uv.x, 1.0 - v_uv.y)).rgb;
-  float gray = dot(rgb, vec3(0.299, 0.587, 0.114));
-  out_color = vec4(gray, gray, gray, 1.0);
+  out_color = vec4(rgb, 1.0);
 }
 `;
 
@@ -249,10 +258,7 @@ export class CameraFrameGrabber {
       gl.bindVertexArray(null);
     }
 
-    // El shader ya escribió gris en RGB y alfa 255. Alcanza con tomar R.
-    for (let source = 0, target = 0; target < this.#gray.length; source += 4, target += 1) {
-      this.#gray[target] = this.#rgba[source];
-    }
+    rgbaToGray(this.#rgba, this.#gray);
 
     const derived = intrinsicsFromProjectionMatrix(
       view.projectionMatrix,
@@ -279,7 +285,6 @@ export class CameraFrameGrabber {
       sourceWidth,
       sourceHeight,
       gray: this.#gray,
-      rgba: this.#rgba,
       intrinsics,
       // La calibración no incluye skew; se asume cero en ese modo.
       skew: this.#calibration ? 0 : scaledDerived.skew,

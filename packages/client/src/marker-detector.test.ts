@@ -6,7 +6,7 @@ import { MarkerDetector } from './marker-detector';
 /**
  * Mock minimal de OpenCV.js para validar la lógica de PnP y la llamada al detector.
  */
-function createMockCV() {
+function createMockCV(markerIds: number[] = [0]) {
   return {
     DICT_APRILTAG_36h11: 0,
     CV_8UC1: 0,
@@ -22,9 +22,8 @@ function createMockCV() {
 
     aruco_ArucoDetector: class {
       detectMarkers(_grayMat: any, cornersVector: any, idsMat: any, _rejectedVector: any) {
-        // Simular 1 marcador detectado con ID 0
-        idsMat.rows = 1;
-        idsMat.data32S = new Int32Array([0]);
+        idsMat.rows = markerIds.length > 0 ? 1 : 0;
+        idsMat.data32S = new Int32Array(markerIds);
 
         const cornerMat = {
           data32F: new Float32Array([
@@ -55,6 +54,9 @@ function createMockCV() {
     Mat: class {
       rows = 0;
       data32S = new Int32Array(0);
+      total() {
+        return this.data32S.length;
+      }
       delete() {}
     },
 
@@ -74,8 +76,9 @@ function createMockCV() {
     },
 
     projectPoints: (_obj: any, _rvec: any, _tvec: any, _cam: any, _dist: any, projPoints: any) => {
-      // Proyectar esquinas casi idénticas a las detectadas para bajo error
-      projPoints.data64F = new Float64Array([
+      // OpenCV 5 emits projected points as float32 for float32 object points.
+      projPoints.data64F = new Float64Array(8).fill(Number.NaN);
+      projPoints.data32F = new Float32Array([
         100.2, 100.1, 200.1, 100.3, 199.9, 200.2, 100.1, 199.8,
       ]);
     },
@@ -111,6 +114,48 @@ describe('MarkerDetector', () => {
     expect(results[0].T_cam_marker.q).toBeDefined();
     expect(results[0].reproj_err_px).toBeLessThan(1.0);
     expect(results[0].corners).toHaveLength(4);
+  });
+
+  it('initializes the flattened OpenCV 5 ArUco API', () => {
+    let refineArguments: [number, number, boolean] | undefined;
+    let detectorArguments: unknown[] = [];
+    const mockCv = {
+      ...createMockCV(),
+      DetectorParameters: undefined,
+      ArucoDetector: undefined,
+      aruco_DetectorParameters: class {
+        delete() {}
+      },
+      aruco_RefineParameters: class {
+        constructor(...args: [number, number, boolean]) {
+          refineArguments = args;
+        }
+
+        delete() {}
+      },
+      aruco_ArucoDetector: class {
+        constructor(...args: unknown[]) {
+          detectorArguments = args;
+        }
+      },
+    };
+
+    new MarkerDetector(mockCv);
+
+    expect(refineArguments).toEqual([10, 3, true]);
+    expect(detectorArguments).toHaveLength(3);
+  });
+
+  it('counts all IDs when OpenCV returns a single-row IDs matrix', () => {
+    const detector = new MarkerDetector(createMockCV([0, 1]));
+    const detections = detector.detect(new Uint8Array(640 * 480), 640, 480, {
+      fx: 500,
+      fy: 500,
+      cx: 320,
+      cy: 240,
+    });
+
+    expect(detections.map(({ id }) => id)).toEqual([0, 1]);
   });
 
   it('permite actualizar el tamaño de los marcadores dinámicamente', () => {

@@ -206,13 +206,13 @@ muestre Vite: `http://localhost:5173/mock.html` si no hay certificados, o
 
 ### Páginas disponibles
 
-| Página         | Ruta            | Uso                                              |
-| -------------- | --------------- | ------------------------------------------------ |
-| Inicio         | `/`             | Estado del entorno y accesos.                    |
-| Cliente AR     | `/ar.html`      | Fases 3 y 4: pose, cámara en gris e intrínsecos. |
-| Diagnóstico AR | `/ar-test.html` | Prueba real de `immersive-ar` y `camera-access`. |
-| Mock           | `/mock.html`    | Webcam y pose simulada en escritorio.            |
-| Salud          | `/health`       | JSON del servidor, la ingesta y Foxglove.        |
+| Página         | Ruta            | Uso                                                             |
+| -------------- | --------------- | --------------------------------------------------------------- |
+| Inicio         | `/`             | Estado del entorno y accesos.                                   |
+| Cliente AR     | `/ar.html`      | Fases 3 y 4: cámara AR a pantalla completa, pose e intrínsecos. |
+| Diagnóstico AR | `/ar-test.html` | Prueba real de `immersive-ar` y `camera-access`.                |
+| Mock           | `/mock.html`    | Webcam y pose simulada en escritorio.                           |
+| Salud          | `/health`       | JSON del servidor, la ingesta y Foxglove.                       |
 
 ## 5. Verificación en la PC
 
@@ -290,9 +290,11 @@ escritorio. El cliente AR de las fases 3 y 4 se prueba en la sección 7.
 ### Cliente AR (Fases 3 y 4)
 
 `/ar.html` es el cliente real. Usa la pose de WebXR/ARCore y, si la sesión
-habilita `camera-access`, captura la imagen con `getCameraImage`, la convierte a
-gris y envía `hello` con los intrínsecos. Si `camera-access` no está disponible,
-sigue funcionando solo con VIO y lo indica en el overlay.
+habilita `camera-access`, captura todo el encuadre con `getCameraImage`, genera
+una imagen en gris para OpenCV y envía `hello` con los intrínsecos. La cámara AR
+se muestra a pantalla completa; no se dibuja una segunda vista previa encima.
+Si `camera-access` no está disponible, sigue funcionando solo con VIO y lo indica
+en el overlay.
 
 1. Abrí `/ar.html` por HTTPS. La página comprueba `window.isSecureContext` y
    `navigator.xr.isSessionSupported('immersive-ar')`.
@@ -306,7 +308,8 @@ sigue funcionando solo con VIO y lo indica en el overlay.
    - **Captura** cercana a 10 Hz;
    - **Intrínsecos** con valores plausibles y **Fuente: XRView** o
      **calibración**;
-   - la vista previa en gris, con el mismo arriba/abajo que la escena real;
+   - la vista AR ocupa la pantalla completa;
+   - la detección procesa todo el encuadre capturado, en escala de grises;
    - **hello** con al menos un envío.
 6. En Foxglove Studio, con `ws://IP_DE_LA_PC:8765`, mirá `/pose/raw` en `odom`,
    `/pose/corrected` en `world` y el árbol `/tf`. La pose corregida usa
@@ -315,15 +318,17 @@ sigue funcionando solo con VIO y lo indica en el overlay.
 
    ```text
    /ar.html?hz=15&ingest=wss://192.168.1.18:8443/ingest
-   /ar.html?camhz=5&camw=480&preview=0
+   /ar.html?camhz=5&camw=480
    ```
 
    `hz` se limita a 1–60. `camhz` se limita a 1–30. `camw` es el lado mayor de
-   la imagen procesada y se limita a 80–1920 px. `preview=0` apaga la vista
-   previa para ahorrar CPU/GPU. La URL de `ingest` debe ser `ws://` o `wss://`.
+   la imagen procesada y se limita a 80–1920 px. `camw` cambia la resolución de
+   procesamiento, no recorta el encuadre. La URL de `ingest` debe ser `ws://` o
+   `wss://`.
 
-El overlay muestra **0 marcadores** porque la detección AprilTag empieza en la
-Fase 5; el contador se conectará al detector en esa fase.
+El contador de marcadores refleja detecciones recientes del worker. Si queda en
+0, comprobá que el detector esté listo y que un AprilTag válido esté dentro del
+encuadre.
 
 ### Calibración opcional de cámara
 
@@ -375,7 +380,8 @@ desde la página.
    - **Cámara: habilitada**, **Estado: capturando** e **Imagen** con tamaño
      procesado;
    - **Captura** ≥ 10 Hz (o el valor configurado con `camhz`);
-   - la vista previa en gris coincide con la escena y no está invertida;
+   - la vista AR ocupa la pantalla completa;
+   - la detección procesa todo el encuadre capturado, en escala de grises;
    - **Intrínsecos** estables y **Fuente** correcta;
    - **hello** con al menos un envío;
    - en `/health`, `byType.hello` mayor que 0 y el dispositivo en
@@ -397,7 +403,7 @@ desde la página.
 - **Sesión AR inicia y tracking OK:** se cumple el criterio de la Fase 0.
 - **La pose de `/ar.html` llega y se mueve con fluidez, con ejes correctos:** se
   cumple el criterio de la Fase 3.
-- **La imagen en gris se ve a ≥10 Hz con orientación correcta y `hello` llega
+- **La captura procesa todo el encuadre a ≥10 Hz y `hello` llega
   con intrínsecos:** se cumple el criterio de la Fase 4.
 - **La pose llega pero los ejes no coinciden:** no aceptar la Fase 3; revisar
   `docs/conventions.md`, la conversión `poseFromWebXRMatrix` y la orientación
@@ -492,13 +498,13 @@ de la Fase 4, no algo que se resuelva con un test unitario.
   el overlay.
 - Cerrá otras apps que usen la cámara y reiniciá la sesión AR.
 
-### La vista previa se ve invertida o girada
+### La cámara o los marcadores se ven invertidos o girados
 
 La textura de cámara de WebXR tiene origen abajo a la izquierda. El shader
-invierte `v` para producir una imagen top-left. Si la vista previa no coincide
-con la escena, revisá `packages/client/src/camera-capture.ts` y anotá el modelo
-de celular y la orientación del dispositivo (vertical/horizontal). No aceptes
-la Fase 4 hasta corregirlo.
+invierte `v` para producir una imagen top-left. Si los contornos de detección no
+coinciden con los marcadores, revisá `packages/client/src/camera-capture.ts` y
+anotá el modelo de celular y la orientación del dispositivo
+(vertical/horizontal). No aceptes la Fase 4 hasta corregirlo.
 
 ### Los intrínsecos no son plausibles
 
@@ -600,7 +606,7 @@ izquierda, altura y yaw derecho tuvieron los signos esperados en `world`.
 ### Checklist de Fase 4
 
 - [x] La captura compila y se incluye en el build multipágina.
-- [x] `pnpm test` pasa los 122 tests (44 shared + 43 client + 35 server).
+- [x] `pnpm test` pasa los 126 tests (44 shared + 47 client + 35 server).
 - [x] El endpoint `/config/camera_intrinsics.json` responde 404 sin archivo.
 - [x] Con una calibración válida responde 200 y `/health` marca
       `camera_intrinsics.available: true`.
@@ -608,7 +614,8 @@ izquierda, altura y yaw derecho tuvieron los signos esperados en `world`.
       calibración, etiqueta del dispositivo y `hello` tras reconexión.
 - [x] `camera-access` se habilita en el celular y `getCameraImage` devuelve una
       textura.
-- [x] La vista previa en gris se ve a ≥10 Hz y con orientación correcta.
+- [x] La captura de cámara se procesa a ≥10 Hz; la detección recibe todo el
+      encuadre en escala de grises.
 - [x] Los intrínsecos del overlay son estables y corresponden a la imagen
       procesada.
 - [x] El servidor recibe `hello` (`byType.hello > 0`) con el dispositivo y

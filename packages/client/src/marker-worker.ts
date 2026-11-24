@@ -23,6 +23,22 @@ async function initCV(): Promise<void> {
     cvInstance = loadedCv;
   } else if (typeof loadedCv === 'function') {
     cvInstance = await loadedCv();
+  } else if (typeof loadedCv.run === 'function') {
+    await new Promise<void>((resolve, reject) => {
+      const onRuntimeInitialized = loadedCv.onRuntimeInitialized;
+      loadedCv.onRuntimeInitialized = () => {
+        try {
+          onRuntimeInitialized?.();
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      };
+      if (loadedCv.calledRun) {
+        resolve();
+      }
+    });
+    cvInstance = loadedCv;
   } else if (loadedCv.then) {
     cvInstance = await loadedCv;
   } else {

@@ -42,36 +42,39 @@ export class MarkerDetector {
 
   #initArucoDetector(): void {
     const cv = this.#cv;
-    // Seleccionar diccionario APRILTAG_36h11
-    let dict: any = null;
-    if (cv.DICT_APRILTAG_36h11 !== undefined) {
-      dict = cv.getPredefinedDictionary(cv.DICT_APRILTAG_36h11);
-    } else if (cv.aruco && cv.aruco.DICT_APRILTAG_36h11 !== undefined) {
-      dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_APRILTAG_36h11);
-    } else if (cv.DICT_6X6_250 !== undefined) {
-      dict = cv.getPredefinedDictionary(cv.DICT_6X6_250);
-    } else {
-      dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_6X6_250);
-    }
-
-    // OpenCV.js 5 exports namespaced C++ classes with an `aruco_` prefix.
-    // Keep the older shapes as fallbacks for custom builds.
+    const aruco = cv.aruco;
+    const dictionaryId = cv.DICT_APRILTAG_36h11 ?? aruco?.DICT_APRILTAG_36h11;
+    const getPredefinedDictionary = cv.getPredefinedDictionary ?? aruco?.getPredefinedDictionary;
     const DetectorParameters =
-      cv.aruco_DetectorParameters ?? cv.DetectorParameters ?? cv.aruco?.DetectorParameters;
-    const ArucoDetector = cv.aruco_ArucoDetector ?? cv.ArucoDetector ?? cv.aruco?.ArucoDetector;
+      cv.aruco_DetectorParameters ?? cv.DetectorParameters ?? aruco?.DetectorParameters;
+    const ArucoDetector = cv.aruco_ArucoDetector ?? cv.ArucoDetector ?? aruco?.ArucoDetector;
     const RefineParameters =
-      cv.aruco_RefineParameters ?? cv.RefineParameters ?? cv.aruco?.RefineParameters;
+      cv.aruco_RefineParameters ?? cv.RefineParameters ?? aruco?.RefineParameters;
 
-    if (!DetectorParameters || !ArucoDetector) {
+    if (dictionaryId === undefined || typeof getPredefinedDictionary !== 'function') {
+      throw new Error('OpenCV.js no expone el diccionario AprilTag 36h11');
+    }
+    if (typeof DetectorParameters !== 'function' || typeof ArucoDetector !== 'function') {
       throw new Error(
-        'OpenCV.js no incluye el modulo ArUco/AprilTag; se requiere OpenCV.js 5 con objdetect',
+        'OpenCV.js no expone las APIs ArUco necesarias; usá un build que incluya el módulo objdetect',
       );
     }
 
-    const params = new DetectorParameters();
-    this.#detector = RefineParameters
-      ? new ArucoDetector(dict, params, new RefineParameters(10, 3, true))
-      : new ArucoDetector(dict, params);
+    const dictionaryOwner = typeof cv.getPredefinedDictionary === 'function' ? cv : aruco;
+    const dictionary = getPredefinedDictionary.call(dictionaryOwner, dictionaryId);
+    const parameters = new DetectorParameters();
+    const refineParameters =
+      typeof RefineParameters === 'function' ? new RefineParameters(10, 3, true) : null;
+
+    try {
+      this.#detector = refineParameters
+        ? new ArucoDetector(dictionary, parameters, refineParameters)
+        : new ArucoDetector(dictionary, parameters);
+    } finally {
+      dictionary.delete?.();
+      parameters.delete?.();
+      refineParameters?.delete?.();
+    }
   }
 
   /**
@@ -98,7 +101,7 @@ export class MarkerDetector {
     try {
       this.#detector.detectMarkers(grayMat, cornersVector, idsMat, rejectedVector);
 
-      const numDetected = idsMat.total ? idsMat.total() : idsMat.rows;
+      const numDetected = typeof idsMat.total === 'function' ? idsMat.total() : idsMat.rows;
       if (numDetected === 0) {
         return [];
       }
@@ -224,7 +227,7 @@ export class MarkerDetector {
       let reproj_err_px: number;
       try {
         cv.projectPoints(objPoints, rvec, tvec, cameraMatrix, distCoeffs, projPoints);
-        const projData = firstNonEmptyData(projPoints, ['data64F', 'data32F'], 8);
+        const projData = firstNonEmptyData(projPoints, ['data32F', 'data64F'], 8);
         if (!projData || projData.length < 8) {
           return null;
         }
@@ -233,6 +236,9 @@ export class MarkerDetector {
         for (let j = 0; j < 4; j++) {
           const dx = projData[j * 2] - corners[j][0];
           const dy = projData[j * 2 + 1] - corners[j][1];
+          if (!Number.isFinite(dx) || !Number.isFinite(dy)) {
+            return null;
+          }
           totalErr += Math.hypot(dx, dy);
         }
         reproj_err_px = totalErr / 4;

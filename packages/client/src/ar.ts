@@ -8,8 +8,8 @@
  *   3. En cada frame, convertir `XRViewerPose` a la convención de `shared`
  *      (marco `odom`) y enviar un mensaje `pose` al relay a `poseHz`.
  *   4. Si `camera-access` está disponible, capturar la textura de cámara a
- *      `cameraHz`, reducirla a gris y mostrar una vista previa. Enviar `hello`
- *      con los intrínsecos derivados (o calibrados) y el tamaño procesado.
+ *      `cameraHz`, generar gris para OpenCV y enviar `hello` con los intrínsecos
+ *      derivados (o calibrados) y el tamaño procesado.
  *   5. Mostrar tracking, FPS, estado del WebSocket, cámara e intrínsecos.
  *
  * El servidor deriva la pose corregida con `T_WORLD_ODOM_INITIAL`; el cliente
@@ -20,6 +20,7 @@ import type {
   CameraCalibration,
   CameraIntrinsics,
   HelloMessage,
+  MarkerMap,
   Pose,
   PoseMessagePayload,
   TrackingState,
@@ -92,9 +93,11 @@ const overlayDeltaAngEl = byId<HTMLElement>('overlay-delta-ang');
 const btnModeDirect = byId<HTMLButtonElement>('mode-direct');
 const btnModeSmooth = byId<HTMLButtonElement>('mode-smooth');
 const btnModeOff = byId<HTMLButtonElement>('mode-off');
-const cameraPreviewEl = byId<HTMLCanvasElement>('camera-preview');
+const markerOverlayEl = byId<HTMLCanvasElement>('marker-overlay');
+const markerOverlayContext = markerOverlayEl.getContext('2d');
 
 const corrector = new LocalizationCorrector({ mode: config.correctionMode });
+let markerMap: MarkerMap | null = null;
 let markerMapLoaded = false;
 
 let session: XRSession | null = null;
@@ -128,8 +131,6 @@ let cameraProbeFrames = 0;
 let lastCameraErrorMs = 0;
 let lastHelloKey = '';
 let helloCount = 0;
-let previewContext: CanvasRenderingContext2D | null = null;
-let previewImageData: ImageData | null = null;
 let rawPose: Pose | null = null;
 let worldPose: Pose | null = null;
 let fps = 0;
@@ -144,8 +145,22 @@ let logLines = 0;
 let markerWorker: Worker | null = null;
 let markerWorkerState: MarkerWorkerState = 'loading';
 let markerWorkerDetail = '';
+let markerDetectionInFlight = false;
 const workerBufferPool: ArrayBuffer[] = [];
 let latestDetections: MarkerDetectionResult[] = [];
+let latestDetectionTimeMs = Number.NEGATIVE_INFINITY;
+let currentFrameTimeMs = 0;
+
+function getFreshDetections(): MarkerDetectionResult[] {
+  const maxAgeMs = 2000 / config.camera.captureHz;
+  return currentFrameTimeMs - latestDetectionTimeMs <= maxAgeMs ? latestDetections : [];
+}
+
+function clearLatestDetections(): void {
+  latestDetections = [];
+  latestDetectionTimeMs = Number.NEGATIVE_INFINITY;
+  overlayMarkersEl.textContent = '0';
+}
 
 function setMarkerWorkerState(state: MarkerWorkerState, detail = ''): void {
   markerWorkerState = state;
@@ -160,6 +175,7 @@ function canStartSession(): boolean {
 function initWorker(): void {
   if (typeof Worker === 'undefined') {
     setMarkerWorkerState('error', 'Web Worker no disponible');
+    log('Este navegador no permite crear Web Workers para la detección de marcadores', 'error');
     return;
   }
   try {
@@ -167,6 +183,7 @@ function initWorker(): void {
     markerWorker = new Worker(new URL('./marker-worker.ts', import.meta.url), {
       type: 'module',
     });
+    log('Iniciando Worker de marcadores (OpenCV.js)…', 'info');
     markerWorker.onmessage = (event: MessageEvent<WorkerResponse>) => {
       const data = event.data;
       if (data.type === 'ready') {
@@ -175,17 +192,22 @@ function initWorker(): void {
         return;
       }
       if (data.type === 'error') {
+        markerDetectionInFlight = false;
+        clearLatestDetections();
         if (data.buffer) {
           workerBufferPool.push(data.buffer);
         }
         setMarkerWorkerState('error', data.error);
         log(data.error, 'warn');
+        updateUi();
         return;
       }
       if (data.type === 'detect_result') {
+        markerDetectionInFlight = false;
         workerBufferPool.push(data.buffer);
         latestDetections = data.detections;
-        overlayMarkersEl.textContent = String(latestDetections.length);
+        latestDetectionTimeMs = data.t;
+        overlayMarkersEl.textContent = String(getFreshDetections().length);
 
         const timestampMs = performance.timeOrigin + data.t;
         for (const det of data.detections) {
@@ -215,15 +237,23 @@ function initWorker(): void {
         updateUi();
       }
     };
-    markerWorker.onerror = (event) => {
-      const detail = event.message || 'Error desconocido al ejecutar el Web Worker';
+    markerWorker.onerror = (event: ErrorEvent) => {
+      markerDetectionInFlight = false;
+      clearLatestDetections();
+      const location =
+        event.filename && event.lineno ? ` (${event.filename}:${event.lineno}:${event.colno})` : '';
+      const detail = `${event.message || 'Error desconocido al ejecutar el Web Worker'}${location}`;
       setMarkerWorkerState('error', detail);
       log(`Error del Web Worker de marcadores: ${detail}`, 'error');
+      updateUi();
     };
     markerWorker.onmessageerror = () => {
+      markerDetectionInFlight = false;
+      clearLatestDetections();
       const detail = 'No se pudo interpretar la respuesta del Web Worker';
       setMarkerWorkerState('error', detail);
       log(detail, 'error');
+      updateUi();
     };
     window.setTimeout(() => {
       if (markerWorkerState === 'loading') {
@@ -240,7 +270,7 @@ function initWorker(): void {
 }
 
 function dispatchToDetectorWorker(time: number, captured: CameraFrame): void {
-  if (!markerWorker) {
+  if (!markerWorker || markerDetectionInFlight) {
     return;
   }
 
@@ -262,21 +292,49 @@ function dispatchToDetectorWorker(time: number, captured: CameraFrame): void {
   const dest = new Uint8Array(buffer);
   dest.set(captured.gray);
 
-  markerWorker.postMessage(
-    {
-      type: 'detect',
-      t: time,
-      width: captured.width,
-      height: captured.height,
-      intrinsics: captured.intrinsics,
-      buffer,
-    },
-    [buffer],
-  );
+  markerDetectionInFlight = true;
+  try {
+    markerWorker.postMessage(
+      {
+        type: 'detect',
+        t: time,
+        width: captured.width,
+        height: captured.height,
+        intrinsics: captured.intrinsics,
+        buffer,
+      },
+      [buffer],
+    );
+  } catch (error) {
+    markerDetectionInFlight = false;
+    workerBufferPool.push(buffer);
+    log(`No se pudo enviar un cuadro al Worker de marcadores: ${errorMessage(error)}`, 'error');
+  }
 }
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function drawMarkerOverlay(frame: Pick<CameraFrame, 'width' | 'height'>): void {
+  if (!markerOverlayContext) {
+    return;
+  }
+
+  if (markerOverlayEl.width !== frame.width || markerOverlayEl.height !== frame.height) {
+    markerOverlayEl.width = frame.width;
+    markerOverlayEl.height = frame.height;
+  }
+
+  markerOverlayContext.clearRect(0, 0, frame.width, frame.height);
+  const detections = getFreshDetections();
+  if (detections.length > 0 && cameraIntrinsics) {
+    drawDebugOverlay(markerOverlayContext, detections, cameraIntrinsics, markerMap);
+  }
+}
+
+function clearMarkerOverlay(): void {
+  markerOverlayContext?.clearRect(0, 0, markerOverlayEl.width, markerOverlayEl.height);
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
@@ -463,7 +521,7 @@ function updateUi(): void {
   overlayTrackingEl.textContent = tracking;
   overlayTrackingEl.className = trackingClass(tracking);
   overlayFpsEl.textContent = fps.toFixed(1);
-  overlayMarkersEl.textContent = String(latestDetections.length);
+  overlayMarkersEl.textContent = String(getFreshDetections().length);
   overlayConnectionEl.textContent = connectionLabel(stats.state);
   overlayConnectionEl.className = connectionClass(stats.state);
   overlaySentEl.textContent = String(stats.sent);
@@ -593,39 +651,6 @@ function loadCalibration(): void {
   })();
 }
 
-function drawCameraPreview(frame: CameraFrame): void {
-  if (!config.camera.preview) {
-    cameraPreviewEl.hidden = true;
-    return;
-  }
-
-  if (cameraPreviewEl.width !== frame.width || cameraPreviewEl.height !== frame.height) {
-    cameraPreviewEl.width = frame.width;
-    cameraPreviewEl.height = frame.height;
-    previewImageData = null;
-  }
-  if (!previewContext) {
-    previewContext = cameraPreviewEl.getContext('2d');
-  }
-  if (!previewContext) {
-    return;
-  }
-
-  if (!previewImageData) {
-    const pixels = new Uint8ClampedArray(
-      frame.rgba.buffer as ArrayBuffer,
-      frame.rgba.byteOffset,
-      frame.rgba.byteLength,
-    );
-    previewImageData = new ImageData(pixels, frame.width, frame.height);
-  }
-  previewContext.putImageData(previewImageData, 0, 0);
-  if (latestDetections.length > 0 && cameraIntrinsics) {
-    drawDebugOverlay(previewContext, latestDetections, cameraIntrinsics);
-  }
-  cameraPreviewEl.hidden = false;
-}
-
 function maybeSendHello(): void {
   if (!cameraIntrinsics || !cameraFrameInfo) {
     return;
@@ -667,6 +692,7 @@ function maybeSendHello(): void {
 }
 
 function maybeCapture(time: number, viewerPose: XRViewerPose): void {
+  currentFrameTimeMs = time;
   if (cameraFeature !== 'enabled' || !cameraGrabber) {
     return;
   }
@@ -707,7 +733,7 @@ function maybeCapture(time: number, viewerPose: XRViewerPose): void {
     cameraIntrinsics = captured.intrinsics;
     cameraSkew = captured.skew;
     intrinsicsSource = cameraCalibration ? 'calibration' : 'derived';
-    drawCameraPreview(captured);
+    drawMarkerOverlay(captured);
     dispatchToDetectorWorker(time, captured);
 
     cameraFrameCount += 1;
@@ -839,11 +865,10 @@ function onSessionEnd(): void {
   lastCameraErrorMs = 0;
   lastHelloKey = '';
   helloCount = 0;
-  previewImageData = null;
+  clearMarkerOverlay();
   rawPose = null;
   worldPose = null;
   fps = 0;
-  cameraPreviewEl.hidden = true;
 
   if (current) {
     current.removeEventListener('end', onSessionEnd);
@@ -899,8 +924,7 @@ async function startSession(): Promise<void> {
   lastCameraErrorMs = 0;
   lastHelloKey = '';
   helloCount = 0;
-  previewImageData = null;
-  cameraPreviewEl.hidden = true;
+  clearMarkerOverlay();
   rawPose = null;
   worldPose = null;
   fps = 0;
@@ -1063,6 +1087,7 @@ async function loadMarkerMapAsync(): Promise<void> {
     const json = await response.json();
     const parsed = safeParseMarkerMap(json);
     if (parsed.success) {
+      markerMap = parsed.data;
       corrector.setMarkerMap(parsed.data);
       markerMapLoaded = true;
       log(`Mapa de marcadores cargado (${parsed.data.markers.length} marcadores)`, 'ok');
@@ -1084,8 +1109,8 @@ async function init(): Promise<void> {
     log(warning, 'warn');
   }
   log(`Relay configurado: ${config.ingestUrl}`, 'info');
-  if (!config.camera.preview) {
-    cameraPreviewEl.hidden = true;
+  if (!markerOverlayContext) {
+    log('No se pudo inicializar la capa de depuración de marcadores', 'warn');
   }
   loadCalibration();
   void loadMarkerMapAsync();
@@ -1137,7 +1162,7 @@ async function init(): Promise<void> {
   } else if (window.isSecureContext) {
     hintEl.textContent =
       'Todo listo. Al iniciar la sesión, la pose se envía al relay y, si camera-access está disponible, ' +
-      'la imagen en gris y los intrínsecos se publican en el overlay.';
+      'OpenCV procesa todo el encuadre capturado y los intrínsecos aparecen en el overlay.';
   }
 
   startButton.disabled = !canStartSession();
