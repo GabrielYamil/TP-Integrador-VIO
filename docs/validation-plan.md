@@ -19,13 +19,13 @@ detallada está en [`results.md`](results.md) y en [`evidence/`](evidence/).
 | 6 — corrección                | **Completada en mapa controlado**          | Directo/suavizado/Off; posición absoluta con error 3D de 5,8 cm                            | Nada del criterio principal; el mapa completo de sala corresponde a la Fase 9            |
 | 7 — Foxglove                  | **Completada**                             | Layout importado y validado en Foxglove Studio 3.6.0; cinco tópicos y telemetría real      | Guardar una captura final para el informe                                                |
 | 8 — registro y evaluación     | **Completada**                             | Corrida real: 724 poses, 26,57 Hz, tracking 100 %, cierre crudo 26,96 cm                   | Usar los resultados locales para los gráficos de la Fase 10                              |
-| 9 — pruebas de sala           | **Pendiente**                              | Mapa demo sintético                                                                        | Medir una sala, instalar marcadores y repetir cada condición al menos 3 veces            |
-| 10 — entrega                  | **Parcial**                                | README y documentación técnica                                                             | Informe final, resultados cuantitativos y video/demo                                     |
+| 9 — pruebas físicas           | **Completada en montaje controlado**       | 9 recorridos y 12 sesiones variables; CSV, JSON y gráficos                                 | Sala multimarcador queda como limitación documentada                                     |
+| 10 — entrega                  | **Avanzada**                               | Informe final, resultados cuantitativos, gráficos y guion                                  | Grabar el video/demo                                                                     |
 
 ## Orden recomendado
 
-1. Medir la sala real y reemplazar el mapa demo para la Fase 9.
-2. Ejecutar las repeticiones de la Fase 9 y preparar la entrega.
+1. Grabar el video/demo siguiendo `docs/video-demo-script.md`.
+2. Opcional: repetir en una sala multimarcador para ampliar la generalización.
 
 ## Criterio de evidencia
 

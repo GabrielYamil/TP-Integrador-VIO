@@ -19,8 +19,8 @@ físicas, cuya ejecución está pendiente.
 | 6 — corrección de localización | **Completada**                | Tres modos y pose absoluta pasaron con un marcador de mapa controlado.                           |
 | 7 — visualización Foxglove     | **Completada**                | Layout de tres paneles validado en Foxglove Studio 3.6.0 y telemetría móvil recibida.            |
 | 8 — registro y evaluación      | **Completada**                | Corrida móvil cerrada grabada y analizada cuantitativamente.                                     |
-| 9 — experimentos físicos       | **Preparada; pendiente**      | Guía creada; faltan mapa medido y al menos tres repeticiones por condición.                      |
-| 10 — documentación y entrega   | **En curso**                  | README, guías y evidencias actualizados; faltan resultados físicos, informe y video/demo.        |
+| 9 — experimentos físicos       | **Completada en controlado**  | 21 ejecuciones: estrategias y cuatro condiciones con tres repeticiones.                          |
+| 10 — documentación y entrega   | **Avanzada**                  | Informe, CSV, gráficos y guion listos; falta grabar el video/demo.                               |
 
 La Fase 0 se cerró el **2026-11-22** con un POCO X7 Pro. La CA de `mkcert` se
 instaló como CA de usuario, Chrome abrió `https://192.168.0.179:5173/` sin
@@ -573,9 +573,9 @@ Esta prueba valida el circuito de grabación con datos sintéticos, pero no demu
 - [x] Aislar avance, giro y altura para confirmar los signos de los ejes.
 - [x] Detectar un AprilTag ID 0 y medir error de reproyección y distancia estimada.
 - [x] Validar PnP con un tamaño físico conocido (16 cm a 60 cm; error −6,23 %).
-- [ ] Comparar los modos `off`, `direct` y `smooth` con recorridos repetibles.
+- [x] Comparar los modos `off`, `direct` y `smooth` con recorridos repetibles.
 - [x] Grabar y analizar una corrida móvil real.
-- [ ] Medir la sala y completar las repeticiones de la Fase 9.
+- [x] Completar las repeticiones de la Fase 9 en el montaje físico controlado.
 
 ### Cómo registrar el resultado
 
@@ -611,6 +611,32 @@ La prueba de Foxglove del 2026-11-05 quedó registrada en la sección 4.3 con la
 
 No modificar los resultados automáticos sin volver a ejecutar los comandos.
 
+## 10.1. Resultados físicos de la Fase 9
+
+Se completaron tres recorridos cerrados por estrategia y tres repeticiones para
+cada condición variable. El cierre corregido de `direct` y `smooth` se calculó
+sobre ventanas estables posteriores a la primera relocalización.
+
+| Estrategia | Cierre crudo mediano | Cierre corregido mediano |
+| ---------- | -------------------- | ------------------------ |
+| Off        | 5,83 cm              | 5,83 cm                  |
+| Directo    | 3,39 cm              | 4,49 cm                  |
+| Suavizado  | 2,36 cm              | 4,71 cm                  |
+
+En este recorrido corto, las correcciones no mejoraron todas las repeticiones:
+cuando la deriva cruda ya era pequeña, el ruido de PnP y la colocación manual
+podían dominar el cierre. Directo mejoró su primera corrida de 13,56 a 7,87 cm.
+
+Las condiciones de 1,20 m, ángulo aproximado de 45° e iluminación ambiente baja
+mantuvieron tracking 100 % y detecciones estables. La oclusión de aproximadamente
+25 % produjo cero detecciones y correcciones en las tres sesiones, aunque WebXR
+conservó tracking 100 %.
+
+Los datos consolidados están en
+[`evidence/phase9-strategy-summary.csv`](evidence/phase9-strategy-summary.csv),
+[`evidence/phase9-condition-summary.csv`](evidence/phase9-condition-summary.csv)
+y el [`informe final`](final-report.md).
+
 ## 11. Limitaciones conocidas
 
 1. La validación móvil se realizó en un solo modelo, POCO X7 Pro; no demuestra
@@ -618,20 +644,19 @@ No modificar los resultados automáticos sin volver a ejecutar los comandos.
 2. `camera-access` funcionó en el dispositivo probado, pero sigue siendo una
    feature opcional en WebXR.
 3. El emulador de Android Studio no implementa WebXR.
-4. El mapa actual es sintético y todavía no representa una sala medida.
+4. El mapa versionado sigue siendo sintético; la validación física usó un mapa
+   local medido de un marcador, no una sala multimarcador.
 5. Los intrínsecos derivados se validaron a 60 cm y mostraron un error de
    −6,23 %; no se realizó calibración propia porque quedó dentro de ±10 %.
-6. La corrección se validó con un marcador de mapa controlado; todavía falta un
-   mapa completo de sala para los experimentos de la Fase 9.
+6. La Fase 9 se completó en un montaje controlado de un marcador; una sala
+   completa con múltiples marcadores queda como trabajo de generalización.
 7. `@foxglove/ws-protocol` 0.8.0 está deprecado, pero se mantiene por decisión
    del proyecto.
 
 ## 12. Próximo paso
 
-1. Medir la sala y reemplazar el mapa demo sintético para la Fase 9.
-2. Seguir `docs/phase-9-physical-tests.md`, con al menos tres
-   repeticiones por condición.
-3. Incorporar las tablas y gráficos al informe final y preparar el video/demo.
+1. Grabar el video/demo siguiendo `docs/video-demo-script.md`.
+2. Opcionalmente repetir en una sala multimarcador.
 
-Las fases 0 a 8 están cerradas para el entorno probado. Las fases 9 y 10
-requieren el mapa medido, las repeticiones físicas y la entrega final.
+Las fases 0 a 9 están cerradas para el entorno probado. La Fase 10 tiene informe,
+resultados y gráficos completos; queda pendiente la grabación del video/demo.

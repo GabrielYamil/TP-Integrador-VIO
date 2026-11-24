@@ -21,8 +21,8 @@ documentación y la interfaz están en español; el código y los tests en ingl�
 | 6 — corrección de localización      | **Completada** con mapa controlado y los tres modos.                  |
 | 7 — visualización en Foxglove       | **Completada**, validada en Foxglove Studio 3.6.0.                    |
 | 8 — registro y evaluación           | **Completada** con una corrida móvil cerrada y análisis cuantitativo. |
-| 9 — experimentos físicos            | Guía preparada; ejecución pendiente.                                  |
-| 10 — documentación y entrega        | En curso; faltan resultados físicos, informe y video/demo.            |
+| 9 — experimentos físicos            | **Completada** en montaje controlado; 21 ejecuciones registradas.     |
+| 10 — documentación y entrega        | Informe y gráficos listos; falta grabar el video/demo.                |
 
 La Fase 0 incluye el servidor HTTPS, el script de certificados, las páginas de
 diagnóstico WebXR y el modo mock de escritorio. El 2026-11-22 se instaló la CA
@@ -343,12 +343,16 @@ emulador no las reemplaza. El plan restante está resumido en
    correcciones, suavizado redujo su magnitud 86–88 % y Off dejó de emitirlas sin
    perder detecciones. La pose absoluta controlada fue `[0,023, 0,627, 1,154] m`
    frente a `[0,000, 0,600, 1,200] m` (error 3D de 5,8 cm). El mapa completo de
-   sala corresponde a la Fase 9.
+   sala multimarcador permanece como limitación del montaje controlado.
 4. **Fase 8:** completada con una corrida cerrada real de 27,21 s, 724 poses,
    tracking 100 %, 26,57 Hz y error de cierre crudo de 26,96 cm.
-5. **Fase 9:** ejecutar la guía de experimentos físicos con al menos tres
-   repeticiones por condición.
-6. **Fase 10:** incorporar tablas/gráficos y preparar el informe y video final.
+5. **Fase 9:** completada con tres recorridos por estrategia y tres repeticiones
+   de distancia, ángulo, iluminación y oclusión. La oclusión parcial bloqueó la
+   detección, aunque WebXR mantuvo tracking 100 %.
+6. **Fase 10:** informe final, tablas, CSV, gráficos y guion preparados. Falta
+   únicamente grabar el video/demo siguiendo [`docs/video-demo-script.md`](docs/video-demo-script.md).
+
+Informe consolidado: [`docs/final-report.md`](docs/final-report.md).
 
 ## Limitaciones conocidas
 
@@ -360,7 +364,8 @@ emulador no las reemplaza. El plan restante está resumido en
   sigue funcionando solo con VIO y las Fases 4 y 5 quedan bloqueadas.
 - Foxglove Studio y el layout se validaron en escritorio; además recibió
   telemetría real del celular. Conviene guardar una captura final para el informe.
-- El mapa actual es sintético; no se midió una sala real.
+- La evaluación física usó un mapa medido de un marcador en un montaje
+  controlado; no se evaluó una sala completa con múltiples marcadores rígidos.
 - `@foxglove/ws-protocol` está deprecado, aunque se mantiene la versión elegida
   por el plan.
 - El servidor Foxglove usa `ws://` en la red local; el relay del celular sí usa
